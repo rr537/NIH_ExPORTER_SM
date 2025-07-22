@@ -1,0 +1,14 @@
+name: nih_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pandas=2.3.0
+  - numpy=2.3.0
+  - pyarrow=20.0.0
+  - flashtext=2.7
+  - nltk=3.9.1
+  - unidecode
+  - tqdm=4.67.1
+  - pyyaml

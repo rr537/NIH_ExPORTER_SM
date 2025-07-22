@@ -1,0 +1,147 @@
+# Configuration for NIH ExPORTER Workflow
+
+folder: data/raw
+
+subfolders:
+  - ClinicalStudies
+  - Patents
+  - PRJ
+  - PRJABS
+  - PUB
+  - PUBLINK
+
+drop_col_header_map:
+  PRJ:
+    - ARRA_FUNDED
+    - CFDA_CODE
+    - ED_INST_TYPE
+    - OPPORTUNITY NUMBER
+    - FUNDING_ICs
+    - NIH_SPENDING_CATS
+    - ORG_DEPT
+    - ORG_DISTRICT
+    - ORG_FIPS
+    - ORG_IPF_CODE
+    - ORG_ZIPCODE
+    - PI_IDS
+    - PROGRAM_OFFICER_NAME
+    - SERIAL_NUMBER
+    - STUDY_SECTION
+    - STUDY_SECTION_NAME
+  PRJABS: []
+  PUB:
+    - AFFILIATION
+    - AUTHOR_LIST
+    - COUNTRY
+    - JOURNAL_ISSUE
+    - JOURNAL_TITLE
+    - JOURNAL_VOLUME
+    - LANG
+    - PAGE_NUMBER
+  PUBLINK: []
+  Patents: []
+  ClinicalStudies: []
+
+rename_columns_map:
+  CORE_PROJECT_NUM: PROJECT_NUMBER
+  PROJECT_ID: PROJECT_NUMBER
+  Core Project Number: PROJECT_NUMBER
+
+keywords:
+  treatment:
+    - CRISPR
+    - gene editing
+    - genome editing
+    - ASO
+    - prime editor
+    - base editor
+    - gene therapy
+    - gene editor
+    - antisense oligonucleotide
+    - cas9
+  disease:
+    - Abetalipoproteinemia
+    - Acute Hepatic Porphyria
+    - Aicardi Syndrome
+    - Alagille Syndrome
+    - Alkaptonuria
+    - Alström Syndrome
+    - Amyotrophic Lateral Sclerosis
+    - Angelman Syndrome
+    - Bardet-Biedl Syndrome
+    - Batten Disease
+    - Beckwith-Wiedemann Syndrome
+    - Brugada Syndrome
+    - CADASIL
+    - Chronic Granulomatous Disease
+    - Cri-du-chat Syndrome
+    - Cystic Fibrosis
+    - Duchenne Muscular Dystrophy
+    - Ehlers-Danlos Syndrome
+    - Epidermolysis Bullosa
+    - Fabry Disease
+    - Fragile X Syndrome
+    - Friedreich's Ataxia
+    - Gaucher Disease
+    - Haemophilia
+    - Hereditary Angioedema
+    - Huntington's Disease
+    - Hurler Syndrome
+    - Incontinentia Pigmenti
+    - inherited
+    - Jumping Frenchmen of Maine
+    - Kabuki Syndrome
+    - Langerhans Cell Histiocytosis
+    - Leigh Syndrome
+    - Lesch-Nyhan Syndrome
+    - Marfan Syndrome
+    - monogenetic
+    - Moyamoya Disease
+    - Multiple System Atrophy
+    - Neurofibromatosis
+    - Niemann-Pick Disease
+    - Ornithine Transcarbamylase Deficiency
+    - orphan disease
+    - Parry-Romberg Syndrome
+    - Phenylketonuria
+    - Pompe Disease
+    - Prader-Willi Syndrome
+    - Primary Ciliary Dyskinesia
+    - Progeria
+    - Pseudoxanthoma Elasticum
+    - rare disease
+    - Rett Syndrome
+    - Sickle Cell Disease
+    - Spinal Muscular Atrophy
+    - Sturge-Weber Syndrome
+    - Tay-Sachs Disease
+    - Von Hippel-Lindau Disease
+    - Wilson's Disease
+    - Wolfram Syndrome
+
+text_columns:
+  - PROJECT_TITLE
+  - PROJECT_TERMS
+  - PHR
+  - ABSTRACT_TEXT
+
+ml_columns:
+  - APPLICATION_ID
+  - PHR
+  - PROJECT_TERMS
+  - PROJECT_TITLE
+  - ABSTRACT_TEXT
+  - total count
+  - total unique count
+  - flagged
+
+# 🔧 Workflow toggles
+force_append: true 
+parallel: true
+remove_duplicates: true
+
+# 🧪 Execution settings
+loglevel: DEBUG
+log_file: nih_export_log.txt
+workers: 11
+output_dir: "../results"
