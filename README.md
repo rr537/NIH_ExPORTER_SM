@@ -1,7 +1,5 @@
-# NIH_ExPORTER_SM
+# NIH ExPORTER Snakemake Workflow for Machine Learning–Ready Datasets
 NIH ExPORTER ML Pipeline
-
-README: NIH ExPORTER ML Pipeline
 
 This repository contains a scalable, modular data pipeline for processing NIH ExPORTER data into machine learning–ready datasets. It includes preprocessing, keyword enrichment using FlashText, and training data extraction for rare disease–focused modeling.
 
