@@ -53,7 +53,7 @@ def load_keywords(config: dict, logger: logging.Logger, remove_stopwords: bool =
         raw_treatments = config.get("keywords", {}).get("treatment", [])
         raw_diseases = config.get("keywords", {}).get("disease", [])
 
-        logger.info(f"📦 Loaded {len(raw_treatments)} treatments, {len(raw_diseases)} diseases")
+        logger.info(f" Loaded {len(raw_treatments)} treatments, {len(raw_diseases)} diseases")
 
         treatments = enrich_keywords(raw_treatments, remove_stopwords=remove_stopwords)
         diseases = enrich_keywords(raw_diseases, remove_stopwords=remove_stopwords)
@@ -62,7 +62,7 @@ def load_keywords(config: dict, logger: logging.Logger, remove_stopwords: bool =
         return treatments, diseases
 
     except Exception as e:
-        logger.error(f"❌ Failed to load keywords: {str(e)}", exc_info=True)
+        logger.error(f" Failed to load keywords: {str(e)}", exc_info=True)
         return [], []
 
 def prepare_keywords(

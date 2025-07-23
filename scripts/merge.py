@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 import pandas as pd
 import logging
 
@@ -51,20 +51,41 @@ def append_dataframes_by_folder(
 
 def merge_linked_dataframes(
     dataframes: Dict[str, pd.DataFrame],
-    logger: Optional[logging.Logger] = None
-) -> Dict[str, pd.DataFrame]:
+    logger: Optional[logging.Logger] = None,
+    flatten: bool = False
+) -> Union[Dict[str, pd.DataFrame], pd.DataFrame]:
     """
     Merges semantically linked data sources:
     - PRJ + PRJABS → on 'APPLICATION_ID'
     - PUB + PUBLINK → on 'PMID'
 
+    Args:
+        dataframes: Dict of cleaned folder → appended DataFrame
+        logger: Optional logger
+        flatten: If True, returns a single combined DataFrame
+
     Returns:
-        Dictionary of merged pairs: 'PRJ_PRJABS' and 'PUB_PUBLINK'
+        Dict of merged dataframes OR single DataFrame (if flatten=True)
     """
+    # 🧩 Grab sources
+    prj = dataframes.get("PRJ")
+    prjabs = dataframes.get("PRJABS")
+    pub = dataframes.get("PUB")
+    publink = dataframes.get("PUBLINK")
+
+    # 🔍 Validate missing inputs
+    missing_sources = []
+    if prj is None: missing_sources.append("PRJ")
+    if prjabs is None: missing_sources.append("PRJABS")
+    if pub is None: missing_sources.append("PUB")
+    if publink is None: missing_sources.append("PUBLINK")
+
+    if missing_sources and logger:
+        logger.warning(f" Missing required merge sources: {missing_sources}")
+
     merged_outputs = {}
 
-    # 💡 Merge PRJ + PRJABS
-    prj, prjabs = dataframes.get("PRJ"), dataframes.get("PRJABS")
+    # 🔗 Merge PRJ + PRJABS
     if prj is not None and prjabs is not None:
         try:
             joined = pd.merge(prj, prjabs, on="APPLICATION_ID", how="left")
@@ -76,7 +97,6 @@ def merge_linked_dataframes(
                 logger.error(" Failed merging PRJ and PRJABS", exc_info=True)
 
     # 🔗 Merge PUB + PUBLINK
-    pub, publink = dataframes.get("PUB"), dataframes.get("PUBLINK")
     if pub is not None and publink is not None:
         try:
             joined = pd.merge(pub, publink, on="PMID", how="left")
@@ -87,4 +107,12 @@ def merge_linked_dataframes(
             if logger:
                 logger.error(" Failed merging PUB and PUBLINK", exc_info=True)
 
-    return merged_outputs
+    # 📦 Return flattened DataFrame if requested
+    if flatten:
+        if not merged_outputs:
+            if logger:
+                logger.warning(" No merged outputs available for flattening. Returning empty DataFrame.")
+            return pd.DataFrame()
+        return pd.concat(list(merged_outputs.values()), ignore_index=True)
+
+    return merged_outputs  # ✅ Explicit return if flatten=False

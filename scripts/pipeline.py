@@ -47,7 +47,7 @@ def full_enrichment_pipeline(config_path: str, remove_stopwords: bool = False) -
     config = load_config(config_path)
     logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
 
-    raw = load_dataframes(config_path)
+    raw = load_dataframes(config_path, logger)
     cleaned = clean_dataframes(config, raw, logger)
     ml_df = construct_ml_dataframe(config, cleaned, logger)
 
@@ -61,10 +61,17 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
     logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
 
     # 🔃 Full pipeline logic in-place for traceability
-    raw = load_dataframes(config_path)
+    raw = load_dataframes(config_path, logger)
     cleaned = clean_dataframes(config, raw, logger)
     appended_df = append_dataframes_by_folder(config, cleaned, logger)
-    linked_df = merge_linked_dataframes(appended_df, logger)
+    appended_df_combined = pd.concat(list(appended_df.values()), ignore_index=True)
+    linked_df = merge_linked_dataframes(appended_df, logger, flatten = False)
+ 
+    # Check if linked_df is empty
+    if linked_df.empty or linked_df.shape[0] == 0:
+        logger.warning(" Linked dataset is empty — stopping pipeline.")
+        return
+
     ml_df = aggregate_project_outputs(linked_df, appended_df, logger)
 
     treatments, diseases = prepare_keywords(config, logger, remove_stopwords)
@@ -75,8 +82,14 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
     export_training_dataframe(MLdf, config, logger, filename="MLdf_training.csv")
     export_training_dataframe(dropped_df, config, logger, filename="MLdf_dropped.csv")
 
-    keyword_total = enriched_df['flagged'].str.len().sum()
-    top_keywords = enriched_df['flagged'].explode().value_counts().head(5).to_dict()
+    # If 'flagged' column is missing, set defaults
+    if 'flagged' not in enriched_df.columns:
+        logger.warning(" No 'flagged' column found in enriched DataFrame — skipping keyword summary.")
+        keyword_total = 0
+        top_keywords = {}
+    else:
+        keyword_total = enriched_df['flagged'].str.len().sum()
+        top_keywords = enriched_df['flagged'].explode().value_counts().head(5).to_dict()
 
     # 📊 Summary JSON construction
     summary_stats = {
@@ -90,7 +103,7 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
             "columns_dropped": {k: len(v) for k, v in config.get("drop_col_header_map", {}).items()}
         },
         "appended": {
-            "total_rows": appended_df.shape[0]
+            "total_rows": appended_df_combined.shape[0]
         },
         "linked": {
             "total_rows_after_merge": linked_df.shape[0]

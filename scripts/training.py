@@ -15,10 +15,16 @@ def create_ml_training_df(
         - MLdf: rows where count > 0
         - MLdf_dropped: rows where count == 0
     """
+    # Validate required column exists
+    required_col = "total unique count"
+    if required_col not in df.columns:
+        logger.error(f" Column '{required_col}' not found in enriched DataFrame.")
+        return pd.DataFrame(), pd.DataFrame()
+
     columns_to_extract: List[str] = config.get("ml_columns", [])
 
     if not columns_to_extract:
-        logger.warning("⚠️ No columns defined in 'ml_columns' for training output.")
+        logger.warning(" No columns defined in 'ml_columns' for training output.")
         return pd.DataFrame(), pd.DataFrame()
 
     try:
@@ -28,16 +34,16 @@ def create_ml_training_df(
         MLdf = df_retained[columns_to_extract]
         MLdf_dropped = df_dropped[columns_to_extract]
 
-        logger.info(f"🧠 Retained {MLdf.shape[0]} training rows, dropped {MLdf_dropped.shape[0]}")
-        logger.info(f"📦 Columns used for ML: {columns_to_extract}")
+        logger.info(f" Retained {MLdf.shape[0]} training rows, dropped {MLdf_dropped.shape[0]}")
+        logger.info(f" Columns used for ML: {columns_to_extract}")
 
         return MLdf, MLdf_dropped
 
     except KeyError as e:
-        logger.error("❌ Column(s) missing from DataFrame during ML filtering", exc_info=True)
+        logger.error(" Column(s) missing from DataFrame during ML filtering", exc_info=True)
         raise
     except Exception as e:
-        logger.error("❌ Unexpected error in ML training filter", exc_info=True)
+        logger.error(" Unexpected error in ML training filter", exc_info=True)
         raise
 
 def export_training_dataframe(
@@ -52,9 +58,9 @@ def export_training_dataframe(
     output_dir = Path(config.get("output_dir", "results")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"📁 Export path: {output_dir}")
+    logger.info(f" Export path: {output_dir}")
 
     out_path = output_dir / filename
     df.to_csv(out_path, index=False)
 
-    logger.info(f"✅ ML training DataFrame saved to: {out_path}")
+    logger.info(f" ML training DataFrame saved to: {out_path}")
