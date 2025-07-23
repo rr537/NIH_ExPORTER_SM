@@ -144,4 +144,4 @@ remove_duplicates: true
 loglevel: DEBUG
 log_file: nih_export_log.txt
 workers: 11
-output_dir: "../results"
+output_dir: results

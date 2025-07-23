@@ -30,14 +30,17 @@ rule enrich_keywords:
 
 rule finalize_training:
     input:
-        "results/enriched.csv"
+        enriched="results/enriched.csv",
+        config="config/config.yaml"
     output:
-        ["results/MLdf_training.csv", "results/MLdf_dropped.csv"]
+        training="results/MLdf_training.csv",
+        dropped="results/MLdf_dropped.csv",
+        summary="results/summary.json"
     log:
         "logs/finalize_training.log"
     conda:
         "envs/nih.yml"
     shell:
         """
-        python scripts/cli.py train > {log} 2>&1
+        python scripts/cli.py train --config {input.config} --stopwords > {log} 2>&1
         """

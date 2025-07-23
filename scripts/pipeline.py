@@ -63,16 +63,16 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
     # 🔃 Full pipeline logic in-place for traceability
     raw = load_dataframes(config_path, logger)
     cleaned = clean_dataframes(config, raw, logger)
+
     appended_df = append_dataframes_by_folder(config, cleaned, logger)
     appended_df_combined = pd.concat(list(appended_df.values()), ignore_index=True)
-    linked_df = merge_linked_dataframes(appended_df, logger, flatten = False)
- 
-    # Check if linked_df is empty
-    if linked_df.empty or linked_df.shape[0] == 0:
-        logger.warning(" Linked dataset is empty — stopping pipeline.")
-        return
 
-    ml_df = aggregate_project_outputs(linked_df, appended_df, logger)
+    linked_df_dict = merge_linked_dataframes(appended_df, logger)
+
+    # 📊 Flatten just for summary
+    linked_df_summary = pd.concat(list(linked_df_dict.values()), ignore_index=True)
+
+    ml_df = aggregate_project_outputs(linked_df_dict, appended_df, logger)
 
     treatments, diseases = prepare_keywords(config, logger, remove_stopwords)
     enriched_df = enrich_with_keyword_metrics(ml_df, config, treatments, diseases, logger)
@@ -82,7 +82,7 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
     export_training_dataframe(MLdf, config, logger, filename="MLdf_training.csv")
     export_training_dataframe(dropped_df, config, logger, filename="MLdf_dropped.csv")
 
-    # If 'flagged' column is missing, set defaults
+    # 🧠 If 'flagged' column is missing, use defaults
     if 'flagged' not in enriched_df.columns:
         logger.warning(" No 'flagged' column found in enriched DataFrame — skipping keyword summary.")
         keyword_total = 0
@@ -91,37 +91,39 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
         keyword_total = enriched_df['flagged'].str.len().sum()
         top_keywords = enriched_df['flagged'].explode().value_counts().head(5).to_dict()
 
-    # 📊 Summary JSON construction
+    # 📊 Build summary report
     summary_stats = {
         "initial_load": {
             "folders_loaded": list(raw.keys()),
-            "file_count": sum(len(folder) for folder in raw.values()),
-            "total_raw_rows": sum(df.shape[0] for folder in raw.values() for df in folder.values())
+            "file_count": int(sum(len(folder) for folder in raw.values())),
+            "total_raw_rows": int(sum(int(df.shape[0]) for folder in raw.values() for df in folder.values()))
         },
         "preprocessing": {
-            "cleaned_rows": sum(df.shape[0] for folder in cleaned.values() for df in folder.values()),
-            "columns_dropped": {k: len(v) for k, v in config.get("drop_col_header_map", {}).items()}
+            "cleaned_rows": int(sum(int(df.shape[0]) for folder in cleaned.values() for df in folder.values())),
+            "columns_dropped": {k: int(len(v)) for k, v in config.get("drop_col_header_map", {}).items()}
         },
         "appended": {
-            "total_rows": appended_df_combined.shape[0]
+            "total_rows": int(appended_df_combined.shape[0])
         },
         "linked": {
-            "total_rows_after_merge": linked_df.shape[0]
+            "total_rows_after_merge": int(linked_df_summary.shape[0]),
+            "merged_sources": list(linked_df_dict.keys())
         },
         "aggregated": {
-            "ml_df_rows": ml_df.shape[0],
-            "ml_df_columns": ml_df.shape[1]
+            "ml_df_rows": int(ml_df.shape[0]),
+            "ml_df_columns": int(ml_df.shape[1])
         },
         "enrichment": {
-            "keyword_total": keyword_total,
-            "top_keywords": top_keywords
+            "keyword_total": int(keyword_total),
+            "top_keywords": {k: int(v) for k, v in top_keywords.items()}
         },
         "training_export": {
-            "ml_training_rows": MLdf.shape[0],
-            "dropped_rows": dropped_df.shape[0]
+            "ml_training_rows": int(MLdf.shape[0]),
+            "dropped_rows": int(dropped_df.shape[0])
         }
     }
 
+    # 📁 Export summary JSON
     output_dir = Path(config.get("output_dir", "results")).resolve()
     summary_path = output_dir / "summary.json"
 
@@ -129,3 +131,4 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
         json.dump(summary_stats, f, indent=2)
 
     logger.info(f" Summary saved to: {summary_path}")
+
