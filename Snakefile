@@ -16,7 +16,8 @@ rule preprocess:
 
 rule enrich_keywords:
     input:
-        "results/cleaned.csv"
+        cleaned="results/cleaned.csv",
+        config="config/config.yaml"
     output:
         "results/enriched.csv"
     log:
@@ -25,7 +26,7 @@ rule enrich_keywords:
         "envs/nih.yml"
     shell:
         """
-        python scripts/cli.py enrich --output {output} --log-file {log} > {log} 2>&1
+        python scripts/cli.py enrich --config {input.config} --output {output} --log-file {log} > {log} 2>&1
         """
 
 rule finalize_training:
