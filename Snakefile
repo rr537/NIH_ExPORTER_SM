@@ -6,12 +6,12 @@ rule preprocess:
     output:
         "results/cleaned.csv"
     log:
-        "logs/preprocess.log"
+        f"logs/preprocess_{date_string}.log"
     conda:
         "envs/nih.yml"
     shell:
         """
-        python scripts/cli.py preprocess --output {output} > {log} 2>&1
+        python scripts/cli.py preprocess --output {output} --log-file {log} > {log} 2>&1
         """
 
 rule enrich_keywords:
@@ -20,12 +20,12 @@ rule enrich_keywords:
     output:
         "results/enriched.csv"
     log:
-        "logs/enrich_keywords.log"
+        f"logs/enrich_keywords_{date_string}.log"
     conda:
         "envs/nih.yml"
     shell:
         """
-        python scripts/cli.py enrich --output {output} > {log} 2>&1
+        python scripts/cli.py enrich --output {output} --log-file {log} > {log} 2>&1
         """
 
 rule finalize_training:
@@ -37,10 +37,10 @@ rule finalize_training:
         dropped="results/MLdf_dropped.csv",
         summary="results/summary.json"
     log:
-        "logs/finalize_training.log"
+         f"logs/finalize_training_{date_string}.log"
     conda:
         "envs/nih.yml"
     shell:
         """
-        python scripts/cli.py train --config {input.config} --stopwords > {log} 2>&1
+        python scripts/cli.py train --config {input.config} --stopwords --log-file {log} > {log} 2>&1
         """

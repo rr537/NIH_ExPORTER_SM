@@ -142,6 +142,7 @@ remove_duplicates: true
 
 # 🧪 Execution settings
 loglevel: DEBUG
+logs_dir: logs
 log_file: nih_export_log.txt
 workers: 11
 output_dir: results
