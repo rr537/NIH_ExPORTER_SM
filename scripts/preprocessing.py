@@ -67,7 +67,7 @@ def drop_specified_columns(
         drop_cols = columns_to_drop.get(folder)
 
         if drop_cols is None:
-            logger.info(f"⏭ No drop rules configured for folder '{folder}' — skipping.")
+            logger.info(f" No drop rules configured for folder '{folder}' — skipping.")
             continue
 
         logger.info(f" Drop rule for '{folder}': {len(drop_cols)} columns -> {drop_cols}")
@@ -113,62 +113,3 @@ def rename_dataframe_columns(
 
             if changed:
                 logger.info(f"[{file_name}] Renamed {len(changed)} column(s): {', '.join(changed)}")
-
-def remove_true_duplicates(
-    df: pd.DataFrame,
-    logger: logging.Logger,
-    folder_name: str,
-    file_name: str
-) -> Tuple[pd.DataFrame, int]:
-    """
-    Detects and removes fully duplicated rows, including handling list columns via tuple conversion.
-    Logs duplicate count and updated shape per file.
-    
-    Returns:
-        Cleaned DataFrame and number of duplicates removed.
-    """
-    df_processed = df.apply(lambda col: col.map(lambda x: tuple(x) if isinstance(x, list) else x))
-    duplicates = df_processed.duplicated(keep=False)
-    num_duplicates = duplicates.sum()
-
-    if num_duplicates > 0:
-        logger.info(f" Found {num_duplicates} duplicate rows in '{file_name}' (folder: '{folder_name}'). Showing sample...")
-        logger.debug(df_processed[duplicates].head())
-        df_processed = df_processed[~duplicates]
-        logger.info(f" Duplicates removed from '{file_name}' — new shape: {df_processed.shape}")
-    else:
-        logger.info(f" No duplicate rows found in '{file_name}' (folder: '{folder_name}').")
-
-    return df_processed, num_duplicates
-
-def clean_dataframes(
-    config: dict,
-    dataframes: Dict[str, Dict[str, pd.DataFrame]],
-    logger: logging.Logger
-) -> Dict[str, Dict[str, pd.DataFrame]]:
-    """
-    Cleans loaded dataframes by validating headers, dropping configured columns,
-    renaming columns using config rules, and removing true duplicates.
-    Logs a summary of duplicates removed across all files.
-    """
-    logger.info(" Starting header validation...")
-    validate_csv_headers(config, dataframes, logger)
-
-    logger.info(" Dropping specified columns...")
-    drop_specified_columns(config, dataframes, logger)
-
-    logger.info(" Renaming columns...")
-    rename_dataframe_columns(config, dataframes, logger)
-
-    logger.info(" Removing true duplicates...")
-    total_removed = 0
-
-    for folder, files in dataframes.items():
-        for name, df in files.items():
-            cleaned, removed = remove_true_duplicates(df, logger, folder, name)
-            dataframes[folder][name] = cleaned
-            total_removed += removed
-
-    logger.info(f" Data cleaning complete. Total duplicates removed across all files: {total_removed:,}")
-
-    return dataframes

@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, Tuple
 import pandas as pd
 import logging
 
@@ -48,6 +48,35 @@ def append_dataframes_by_folder(
             logger.error(f" Error appending folder '{folder}': {str(e)}", exc_info=True)
 
     return appended_dataframes
+
+def remove_true_duplicates(
+    df: pd.DataFrame,
+    logger: logging.Logger,
+    folder_name: str,
+    file_name: str = None
+) -> Tuple[pd.DataFrame, int]:
+    """
+    Detects and removes fully duplicated rows, including handling list columns via tuple conversion.
+    Logs duplicate count and updated shape per folder.
+
+    Returns:
+        Cleaned DataFrame and number of duplicates removed.
+    """
+    df_processed = df.apply(lambda col: col.map(lambda x: tuple(x) if isinstance(x, list) else x))
+    duplicates = df_processed.duplicated(keep=False)
+    num_duplicates = duplicates.sum()
+
+    label = f"'{file_name}' (folder: '{folder_name}')" if file_name else f"folder '{folder_name}'"
+
+    if num_duplicates > 0:
+        logger.info(f" Found {num_duplicates} duplicate rows in {label}. Showing sample...")
+        logger.debug(df_processed[duplicates].head())
+        df_processed = df_processed[~duplicates]
+        logger.info(f" Duplicates removed from {label} — new shape: {df_processed.shape}")
+    else:
+        logger.info(f" No duplicate rows found in {label}.")
+
+    return df_processed, num_duplicates
 
 def merge_linked_dataframes(
     dataframes: Dict[str, pd.DataFrame],

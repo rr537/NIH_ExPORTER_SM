@@ -38,16 +38,18 @@ conda env create -f envs/nih.yml
 conda activate nih_env
 
 # Run full pipeline
-snakemake --use-conda --cores 4 finalize_training
+snakemake --use-conda --cores 4 finalize_training #Not working 
 
 # Or run steps manually:
-python scripts/cli.py preprocess --config config/config.yaml --output results/cleaned.csv
+python scripts/cli.py preprocess --config config/config.yaml --output results/cleaned.csv --summary-json results/preprocessing_summary.json
+
 python scripts/cli.py enrich --config config/config.yaml --output results/enriched.csv
 python scripts/cli.py train --config config/config.yaml --stopwords
 
-ML Output:
+Full pipeline outputs:
 - results/MLdf_training.csv → ML-ready dataset
 - results/MLdf_dropped.csv → Rows without keyword matches
+- summary.json
 
 Keyword Strategy:
 FlashText enriches terms using pluralization, punctuation normalization, and accent removal. Config supports omit lists and stopword control.
