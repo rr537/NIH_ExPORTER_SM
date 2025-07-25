@@ -62,7 +62,10 @@ def remove_true_duplicates(
     Returns:
         Cleaned DataFrame and number of duplicates removed.
     """
-    df_processed = df.apply(lambda col: col.map(lambda x: tuple(x) if isinstance(x, list) else x))
+    df_processed = df.copy()
+    for col in df.columns:
+        df_processed[col] = df[col].map(lambda x: tuple(x) if isinstance(x, list) else x)
+
     duplicates = df_processed.duplicated(keep=False)
     num_duplicates = duplicates.sum()
 

@@ -63,25 +63,6 @@ def clean_dataframes(
 
     return dataframes, column_summary, total_removed
 
-# Helper function to construct the ML DataFrame
-def construct_ml_dataframe(
-    config: Dict,
-    cleaned_data: Dict[str, Dict[str, pd.DataFrame]],
-    logger: logging.Logger
-) -> pd.DataFrame:
-
-    appended_df = append_dataframes_by_folder(config, cleaned_data, logger)
-    deduped_df, _ = deduplicate_appended_dataframes(appended_df, logger)
-    linked = merge_linked_dataframes(deduped_df, logger)
-    ml_df = aggregate_project_outputs(linked, deduped_df, logger)
-
-    if ml_df.empty:
-        logger.warning(" ML DataFrame construction failed — received empty output.")
-    else:
-        logger.info(f" ML DataFrame ready: {ml_df.shape[0]:,} rows × {ml_df.shape[1]:,} columns")
-
-    return ml_df
-
 # Helper function to deduplicate appended DataFrames
 def deduplicate_appended_dataframes(
     appended_df: Dict[str, pd.DataFrame],
@@ -96,6 +77,35 @@ def deduplicate_appended_dataframes(
         total_duplicates_removed += num_removed
 
     return deduped_df, total_duplicates_removed
+
+#For deduplication after aggregation 
+def deduplicate_single_dataframe(
+    df: pd.DataFrame,
+    logger: logging.Logger,
+    folder_name: str = "AGGREGATED"
+) -> Tuple[pd.DataFrame, int]:
+    cleaned_df, num_removed = remove_true_duplicates(df, logger, folder_name)
+    return cleaned_df, num_removed
+
+
+# Helper function to construct the ML DataFrame
+def construct_ml_dataframe(
+    config: Dict,
+    cleaned_data: Dict[str, Dict[str, pd.DataFrame]],
+    logger: logging.Logger
+) -> pd.DataFrame:
+
+    appended_df = append_dataframes_by_folder(config, cleaned_data, logger)
+    linked = merge_linked_dataframes(appended_df, logger)
+    aggregate_df = aggregate_project_outputs(linked, appended_df, logger)
+    ml_df , _ = deduplicate_single_dataframe(aggregate_df, logger)
+
+    if ml_df.empty:
+        logger.warning(" ML DataFrame construction failed — received empty output.")
+    else:
+        logger.info(f" ML DataFrame ready: {ml_df.shape[0]:,} rows × {ml_df.shape[1]:,} columns")
+
+    return ml_df
 
 # Pipeline to construct a single ML Dataframe with study outcome metrics (publication, patent, clinical study counts)
 def full_ml_pipeline(config_path: str) -> pd.DataFrame:
@@ -132,9 +142,9 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
     cleaned, column_summary, total_dup_removed = clean_dataframes(config, raw, logger)
 
     appended_df = append_dataframes_by_folder(config, cleaned, logger)
-    deduped_df, total_duplicates_removed = deduplicate_appended_dataframes(appended_df, logger)
-    linked_df_dict = merge_linked_dataframes(deduped_df, logger)
-    ml_df = aggregate_project_outputs(linked_df_dict, deduped_df, logger)
+    linked_df = merge_linked_dataframes(appended_df, logger)
+    aggregate_df = aggregate_project_outputs(linked_df, appended_df, logger)
+    ml_df , total_duplicates_removed = deduplicate_single_dataframe(aggregate_df, logger)
 
     treatments, diseases = prepare_keywords(config, logger, remove_stopwords)
     enriched_df = enrich_with_keyword_metrics(ml_df, config, treatments, diseases, logger)
@@ -142,8 +152,8 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
 
     # 📊 Flatten just for summary
     appended_df_combined = pd.concat(list(appended_df.values()), ignore_index=True)
-    deduped_df_combined = pd.concat(list(deduped_df.values()), ignore_index=True) 
-    linked_df_summary = pd.concat(list(linked_df_dict.values()), ignore_index=True)
+    linked_df_summary = pd.concat(list(linked_df.values()), ignore_index=True)
+    deduped_df_combined = pd.concat(list(ml_df.values()), ignore_index=True) 
 
     # 📝 Export the final ML DataFrames
     export_training_dataframe(MLdf, config, logger, filename="MLdf_training.csv")
@@ -181,7 +191,7 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
         },
         "linked": {
             "total_rows_after_merge": int(linked_df_summary.shape[0]),
-            "merged_sources": list(linked_df_dict.keys()),
+            "merged_sources": list(linked_df.keys()),
             "total_columns_after_merge": int(linked_df_summary.shape[1])
         },
         "aggregated": {
