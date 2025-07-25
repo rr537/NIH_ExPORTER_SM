@@ -10,7 +10,7 @@ import pandas as pd
 from scripts.config_loader import load_config
 from scripts.logger import configure_logger
 from scripts.loader import load_dataframes
-from scripts.pipeline import clean_dataframes, full_enrichment_pipeline, full_ml_pipeline, finalize_training_dataset
+from scripts.pipeline import full_enrichment_pipeline, full_ml_pipeline, finalize_training_dataset
 from scripts.keywords import load_keywords
 from scripts.enrichment import enrich_with_keyword_metrics
 from scripts.loader import (validate_data_sources, validate_folder_path)
@@ -65,6 +65,9 @@ def preprocess(config_path: str, output_path: str, summary_path: str = None):
 def enrich(config_path: str, output_path: str, remove_stopwords: bool = False):
     config = load_config(config_path)
     logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
+
+    validate_folder_path(config_path, logger)
+    validate_data_sources(config_path, logger)
 
     enriched_df = full_enrichment_pipeline(
         config_path=config_path,

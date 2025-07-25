@@ -3,94 +3,86 @@ from typing import Dict, List, Tuple
 import pandas as pd
 import logging
 
-def validate_csv_headers(config: dict, dataframes: Dict[str, Dict[str, pd.DataFrame]], logger: logging.Logger) -> Dict[str, List[str]]:
+def validate_csv_headers_from_df(
+    config: dict,
+    df: pd.DataFrame,
+    logger: logging.Logger,
+    label: str = "Aggregated Output"
+) -> Dict[str, List[str]]:
     """
-    Validates whether expected drop columns are present in loaded dataframes.
+    Validates whether expected drop columns are present in a single aggregated dataframe.
 
     Returns:
         Dict mapping folder names to missing columns (only if mismatches exist).
     """
+    logger.info(f" Starting header validation for '{label}'...")
     total_missing_headers = {}
-    missing_folder_configs = []
 
-    for folder, file_dfs in dataframes.items():
-        expected_drop_cols = config.get("drop_col_header_map", {}).get(folder)
+    drop_map = config.get("drop_col_header_map", {})
+    if not drop_map:
+        logger.warning(" No drop_col_header_map found in config — skipping header validation.")
+        return {}
 
-        if expected_drop_cols is None:
-            missing_folder_configs.append(folder)
-            continue
+    actual_headers = set(df.columns)
 
-        actual_headers = set()
-        for df in file_dfs.values():
-            actual_headers.update(df.columns)
-
-        missing = set(expected_drop_cols) - actual_headers
-        matched = set(expected_drop_cols) & actual_headers
+    for folder, expected_cols in drop_map.items():
+        missing = set(expected_cols) - actual_headers
+        matched = set(expected_cols) & actual_headers
 
         if matched:
-            logger.info(f"'{folder}' has {len(matched)} column(s) eligible for dropping: {sorted(matched)}")
-
+            logger.info(f" '{folder}' has {len(matched)} column(s) eligible for dropping: {sorted(matched)}")
         if missing:
-            logger.warning(f"'{folder}' is missing expected columns: {sorted(missing)}")
+            logger.warning(f" '{folder}' is missing expected columns: {sorted(missing)}")
             total_missing_headers[folder] = sorted(missing)
         else:
-            logger.info(f"'{folder}' passed header validation.")
+            logger.info(f" '{folder}' passed header validation.")
 
-    if missing_folder_configs:
-        logger.warning(f"No config found for: {', '.join(missing_folder_configs)}")
-
-    if not total_missing_headers and not missing_folder_configs:
-        logger.info(" All folders passed header validation.")
-
+    if not total_missing_headers:
+        logger.info(" All drop folders passed header validation.")
+        
     return total_missing_headers
 
-def drop_specified_columns(
+def drop_specified_columns_from_df(
     config: dict,
-    dataframes: Dict[str, Dict[str, pd.DataFrame]],
-    logger: logging.Logger
-) -> None:
+    df: pd.DataFrame,
+    logger: logging.Logger,
+    label: str = "Aggregated Output"
+) -> pd.DataFrame:
     """
-    Drops columns from each DataFrame based on folder-specific rules.
+    Drops specified columns from a flat DataFrame using 'drop_col_header_map' config.
 
-    Args:
-        config: Parsed YAML configuration.
-        dataframes: Dict of folder -> file -> DataFrame.
-        logger: Logger instance for messages.
+    Returns:
+        Modified DataFrame with columns dropped.
     """
-    columns_to_drop = config.get("drop_col_header_map", {})
+    logger.info(f" Dropping columns from '{label}'...")
+    drop_map = config.get("drop_col_header_map", {})
 
-    if not columns_to_drop:
-        logger.warning(" No column drop configuration found in 'drop_col_header_map'.")
-        return
+    # Merge all drop rules from different folders
+    all_cols_to_drop = set()
+    for folder, cols in drop_map.items():
+        all_cols_to_drop.update(cols)
 
-    for folder, file_dfs in dataframes.items():
-        drop_cols = columns_to_drop.get(folder)
+    existing = [col for col in all_cols_to_drop if col in df.columns]
+    missing = [col for col in all_cols_to_drop if col not in df.columns]
 
-        if drop_cols is None:
-            logger.info(f" No drop rules configured for folder '{folder}' — skipping.")
-            continue
+    if existing:
+        logger.info(f" Dropping {len(existing)} columns from '{label}': {existing}")
+        df.drop(columns=existing, inplace=True)
 
-        logger.info(f" Drop rule for '{folder}': {len(drop_cols)} columns -> {drop_cols}")
+    if missing:
+        logger.debug(f" Columns not found in '{label}' for dropping: {missing}")
 
-        for file_name, df in file_dfs.items():
-            existing = [col for col in drop_cols if col in df.columns]
-            missing = [col for col in drop_cols if col not in df.columns]
-
-            if existing:
-                df.drop(columns=existing, inplace=True)
-                logger.info(f" Dropped {len(existing)} columns from '{file_name}' in '{folder}': {existing}")
-
-            if missing:
-                logger.debug(f" Columns not found in '{file_name}' for dropping: {missing}")
+    return df
 
 def rename_dataframe_columns(
     config: dict,
     dataframes: Dict[str, Dict[str, pd.DataFrame]],
     logger: logging.Logger
-) -> None:
+) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
     Applies renaming rules to all DataFrames using config['rename_columns_map'].
     """
+    logger.info(" Renaming columns...")
     rename_mapping = config.get("rename_columns_map", {})
 
     if not rename_mapping:
@@ -113,3 +105,4 @@ def rename_dataframe_columns(
 
             if changed:
                 logger.info(f"[{file_name}] Renamed {len(changed)} column(s): {', '.join(changed)}")
+    return dataframes

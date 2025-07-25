@@ -49,35 +49,42 @@ def append_dataframes_by_folder(
 
     return appended_dataframes
 
-def remove_true_duplicates(
+def remove_true_duplicates_from_df(
     df: pd.DataFrame,
     logger: logging.Logger,
-    folder_name: str,
-    file_name: str = None
+    label: str = "Aggregate Output"
 ) -> Tuple[pd.DataFrame, int]:
     """
-    Detects and removes fully duplicated rows, including handling list columns via tuple conversion.
-    Logs duplicate count and updated shape per folder.
+    Detects and removes fully duplicated rows from a single aggregate dataframe.
+    Converts list-type columns to tuples to support accurate duplication checks.
+
+    Args:
+        df: Input DataFrame.
+        logger: Logger instance.
+        label: Custom label for logging context (default: 'Aggregated Output').
 
     Returns:
-        Cleaned DataFrame and number of duplicates removed.
+        Tuple of cleaned DataFrame and duplicate count.
     """
+    logger.info(f" Checking for true duplicates in '{label}'...")
+
     df_processed = df.copy()
-    for col in df.columns:
-        df_processed[col] = df[col].map(lambda x: tuple(x) if isinstance(x, list) else x)
+
+    # Convert list-like columns to hashable tuples for duplication detection
+    for col in df_processed.columns:
+        if df_processed[col].apply(lambda x: isinstance(x, list)).any():
+            df_processed[col] = df_processed[col].map(lambda x: tuple(x) if isinstance(x, list) else x)
 
     duplicates = df_processed.duplicated(keep=False)
     num_duplicates = duplicates.sum()
 
-    label = f"'{file_name}' (folder: '{folder_name}')" if file_name else f"folder '{folder_name}'"
-
     if num_duplicates > 0:
-        logger.info(f" Found {num_duplicates} duplicate rows in {label}. Showing sample...")
+        logger.info(f" Found {num_duplicates:,} duplicate rows in '{label}'. Showing sample...")
         logger.debug(df_processed[duplicates].head())
         df_processed = df_processed[~duplicates]
-        logger.info(f" Duplicates removed from {label} — new shape: {df_processed.shape}")
+        logger.info(f" Duplicates removed — new shape: {df_processed.shape[0]:,} rows × {df_processed.shape[1]:,} columns")
     else:
-        logger.info(f" No duplicate rows found in {label}.")
+        logger.info(f" No duplicate rows found in '{label}'.")
 
     return df_processed, num_duplicates
 

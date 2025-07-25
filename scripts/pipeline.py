@@ -1,8 +1,8 @@
 from scripts.config_loader import load_config
 from scripts.loader import load_dataframes
 from scripts.logger import configure_logger
-from scripts.preprocessing import validate_csv_headers, drop_specified_columns, rename_dataframe_columns
-from scripts.merge import append_dataframes_by_folder, remove_true_duplicates, merge_linked_dataframes
+from scripts.preprocessing import validate_csv_headers_from_df, drop_specified_columns_from_df, rename_dataframe_columns
+from scripts.merge import append_dataframes_by_folder, remove_true_duplicates_from_df, merge_linked_dataframes
 from scripts.aggregation import aggregate_project_outputs
 from scripts.keywords import prepare_keywords
 from scripts.enrichment import enrich_with_keyword_metrics
@@ -10,96 +10,26 @@ import pandas as pd
 import json
 from pathlib import Path
 import logging
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional 
 from scripts.training import create_ml_training_df, export_training_dataframe
 from datetime import datetime
 
-# Helper function to validate CSV headers, drop specified columns, and rename columns
-def clean_dataframes(
-    config: dict,
-    dataframes: Dict[str, Dict[str, pd.DataFrame]],
-    logger: logging.Logger
-) -> Tuple[
-    Dict[str, Dict[str, pd.DataFrame]],  # cleaned data
-    Dict[str, Dict[str, List[str]]],     # column summary per folder
-    int                                  # total_duplicates_removed
-    ]:
-    """
-    Cleans loaded dataframes by validating headers, dropping configured columns,
-    renaming columns using config rules, and removing true duplicates.
-    Logs a summary of duplicates removed across all files.
-    """
-    logger.info(" Starting header validation...")
-    validate_csv_headers(config, dataframes, logger)
+# Pipeline to construct a single ML Dataframe with study outcome metrics (publication, patent, clinical study counts)
+def full_ml_pipeline(config_path: str, logger: Optional[logging.Logger] = None) -> pd.DataFrame:
+    config = load_config(config_path)
+    if logger is None:
+        logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
 
-    logger.info(" Dropping specified columns...")
-    drop_specified_columns(config, dataframes, logger)
+    raw_dict = load_dataframes(config_path, logger)
+    rename_dict = rename_dataframe_columns(config, raw_dict, logger)
+    appended_dict = append_dataframes_by_folder(config, rename_dict, logger)
+    linked_dict = merge_linked_dataframes(appended_dict, logger)
+    aggregate_df = aggregate_project_outputs(linked_dict, appended_dict, logger)
+    dedup_df , _ = remove_true_duplicates_from_df(aggregate_df, logger)
 
-    logger.info(" Renaming columns...")
-    rename_dataframe_columns(config, dataframes, logger)
-
-    logger.info(" Removing true duplicates...")
-    total_removed = 0
-
-    # Remove duplicates by iterating through each folder and its DataFrames
-    for folder, files in dataframes.items():
-        for name, df in files.items():
-            cleaned, removed = remove_true_duplicates(df, logger, folder, name)
-            dataframes[folder][name] = cleaned
-            total_removed += removed
-
-    # Collect column summary for each folder
-    column_summary = {}
-   
-    for folder in dataframes:
-        dropped = config.get("drop_col_header_map", {}).get(folder, [])
-        renamed = list(config.get("rename_columns_map", {}).keys())
-        column_summary[folder] = {
-            "dropped_columns": dropped,
-            "renamed_columns": renamed
-        }
-
-    logger.info(f" Data cleaning complete. Total duplicates removed across all files: {total_removed:,}")
-
-    return dataframes, column_summary, total_removed
-
-# Helper function to deduplicate appended DataFrames
-def deduplicate_appended_dataframes(
-    appended_df: Dict[str, pd.DataFrame],
-    logger: logging.Logger
-) -> Tuple[Dict[str, pd.DataFrame], int]:
-    deduped_df = {}
-    total_duplicates_removed = 0
-
-    for folder_name, df in appended_df.items():
-        cleaned_df, num_removed = remove_true_duplicates(df, logger, folder_name)
-        deduped_df[folder_name] = cleaned_df
-        total_duplicates_removed += num_removed
-
-    return deduped_df, total_duplicates_removed
-
-#For deduplication after aggregation 
-def deduplicate_single_dataframe(
-    df: pd.DataFrame,
-    logger: logging.Logger,
-    folder_name: str = "AGGREGATED"
-) -> Tuple[pd.DataFrame, int]:
-    cleaned_df, num_removed = remove_true_duplicates(df, logger, folder_name)
-    return cleaned_df, num_removed
-
-
-# Helper function to construct the ML DataFrame
-def construct_ml_dataframe(
-    config: Dict,
-    cleaned_data: Dict[str, Dict[str, pd.DataFrame]],
-    logger: logging.Logger
-) -> pd.DataFrame:
-
-    appended_df = append_dataframes_by_folder(config, cleaned_data, logger)
-    linked = merge_linked_dataframes(appended_df, logger)
-    aggregate_df = aggregate_project_outputs(linked, appended_df, logger)
-    ml_df , _ = deduplicate_single_dataframe(aggregate_df, logger)
-
+    total_missing_headers = validate_csv_headers_from_df(config, dedup_df, logger)
+    ml_df = drop_specified_columns_from_df(config, dedup_df, logger)
+ 
     if ml_df.empty:
         logger.warning(" ML DataFrame construction failed — received empty output.")
     else:
@@ -107,25 +37,12 @@ def construct_ml_dataframe(
 
     return ml_df
 
-# Pipeline to construct a single ML Dataframe with study outcome metrics (publication, patent, clinical study counts)
-def full_ml_pipeline(config_path: str) -> pd.DataFrame:
-    config = load_config(config_path)
-    logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
-
-    raw = load_dataframes(config_path)
-    cleaned, column_summary, total_dup_removed = clean_dataframes(config, raw, logger)
-    ml_df = construct_ml_dataframe(config, cleaned, logger)
-
-    return ml_df
-
 # Pipeline to construct a single ML Dataframe with study outcome metrics + enrich with additional keyword information. Includes keyword counts and flagging
 def full_enrichment_pipeline(config_path: str, remove_stopwords: bool = False) -> pd.DataFrame:
     config = load_config(config_path)
-    logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
 
-    raw = load_dataframes(config_path, logger)
-    cleaned, column_summary, total_dup_removed = clean_dataframes(config, raw, logger)
-    ml_df = construct_ml_dataframe(config, cleaned, logger)
+    logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
+    ml_df = full_ml_pipeline(config_path, logger)
 
     treatments, diseases = prepare_keywords(config, logger, remove_stopwords=remove_stopwords)
     enriched_df = enrich_with_keyword_metrics(ml_df, config, treatments, diseases, logger)
