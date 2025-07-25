@@ -140,7 +140,7 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
     enriched_df = enrich_with_keyword_metrics(ml_df, config, treatments, diseases, logger)
     MLdf, dropped_df = create_ml_training_df(enriched_df, config, logger)
 
-    # 📊 Flatten just for summary
+    # 📊 Flatten DataFrames for summary
     appended_df_combined = pd.concat(list(appended_df.values()), ignore_index=True)
     deduped_df_combined = pd.concat(list(deduped_df.values()), ignore_index=True) 
     linked_df_summary = pd.concat(list(linked_df_dict.values()), ignore_index=True)
