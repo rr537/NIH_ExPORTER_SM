@@ -91,33 +91,26 @@ def remove_true_duplicates_from_df(
 def merge_linked_dataframes(
     dataframes: Dict[str, pd.DataFrame],
     logger: Optional[logging.Logger] = None,
-    flatten: bool = False
 ) -> Union[Dict[str, pd.DataFrame], pd.DataFrame]:
     """
     Merges semantically linked data sources:
     - PRJ + PRJABS → on 'APPLICATION_ID'
-    - PUB + PUBLINK → on 'PMID'
 
     Args:
         dataframes: Dict of cleaned folder → appended DataFrame
         logger: Optional logger
-        flatten: If True, returns a single combined DataFrame
 
     Returns:
-        Dict of merged dataframes OR single DataFrame (if flatten=True)
+        Dict of merged dataframes OR single DataFrame 
     """
     # 🧩 Grab sources
     prj = dataframes.get("PRJ")
     prjabs = dataframes.get("PRJABS")
-    pub = dataframes.get("PUB")
-    publink = dataframes.get("PUBLINK")
 
     # 🔍 Validate missing inputs
     missing_sources = []
     if prj is None: missing_sources.append("PRJ")
     if prjabs is None: missing_sources.append("PRJABS")
-    if pub is None: missing_sources.append("PUB")
-    if publink is None: missing_sources.append("PUBLINK")
 
     if missing_sources and logger:
         logger.warning(f" Missing required merge sources: {missing_sources}")
@@ -135,23 +128,4 @@ def merge_linked_dataframes(
             if logger:
                 logger.error(" Failed merging PRJ and PRJABS", exc_info=True)
 
-    # 🔗 Merge PUB + PUBLINK
-    if pub is not None and publink is not None:
-        try:
-            joined = pd.merge(pub, publink, on="PMID", how="left")
-            merged_outputs["PUB_PUBLINK"] = joined
-            if logger:
-                logger.info(f" Merged PUB + PUBLINK: {joined.shape[0]:,} rows × {joined.shape[1]:,} columns")
-        except Exception as e:
-            if logger:
-                logger.error(" Failed merging PUB and PUBLINK", exc_info=True)
-
-    # 📦 Return flattened DataFrame if requested
-    if flatten:
-        if not merged_outputs:
-            if logger:
-                logger.warning(" No merged outputs available for flattening. Returning empty DataFrame.")
-            return pd.DataFrame()
-        return pd.concat(list(merged_outputs.values()), ignore_index=True)
-
-    return merged_outputs  # ✅ Explicit return if flatten=False
+    return merged_outputs 

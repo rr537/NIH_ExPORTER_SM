@@ -12,48 +12,38 @@ def aggregate_project_outputs(
     into a unified project-level DataFrame.
     """
 
-    required_keys = ["PRJ_PRJABS", "PUB_PUBLINK"]
-    missing = [key for key in required_keys if key not in linked_merged or linked_merged[key] is None]
-
-    if missing:
-        if logger:
-            logger.warning(f" Missing required data: {missing}. Returning empty DataFrame.")
-        return pd.DataFrame()
-
     prj_df = linked_merged["PRJ_PRJABS"].copy()
-    pub_df = linked_merged["PUB_PUBLINK"]
     final_df = prj_df
 
 # 📚 Publication count via PROJECT_NUMBER + PMID combination
-    try:
-        # Step 1: Concatenate PROJECT_NUMBER and PMID
-        pub_df["project_pub_combo"] = pub_df["PROJECT_NUMBER"].astype(str) + "_" + pub_df["PMID"].astype(str)
+    publications = merged_dataframes.get("PUBLINK")
+    if publications is not None:
+        try:
+            # Step 2: Detect and log duplicate combinations
+            duplicate_combos = publications.duplicated(subset=["PROJECT_NUMBER", "PMID"], keep=False)
+            num_duplicates = duplicate_combos.sum()
 
-        # Step 2: Detect and log duplicate combinations
-        duplicate_combos = pub_df.duplicated(subset=["project_pub_combo"], keep=False)
-        num_duplicates = duplicate_combos.sum()
+            if logger:
+                logger.info(f" Found {num_duplicates:,} duplicated PROJECT_NUMBER + PMID pairs in PUB_PUBLINK.")
 
-        if logger:
-            logger.info(f" Found {num_duplicates:,} duplicated PROJECT_NUMBER + PMID pairs in PUB_PUBLINK.")
+            # Step 3: Count unique combinations per PROJECT_NUMBER
+            unique_combos = publications.drop_duplicates(subset=["PROJECT_NUMBER", "PMID"])  # Keep first occurrence
+            pub_count = (
+                unique_combos.groupby("PROJECT_NUMBER")
+                .size()
+                .reset_index(name="publication count")
+            )
 
-        # Step 3: Count unique combinations per PROJECT_NUMBER
-        unique_combos = pub_df[~duplicate_combos]  # or use .drop_duplicates(["project_pub_combo"])
-        pub_count = (
-            unique_combos.groupby("PROJECT_NUMBER")
-            .size()
-            .reset_index(name="publication count")
-        )
+            # Step 4: Merge into final project-level dataframe
+            final_df = final_df.merge(pub_count, on="PROJECT_NUMBER", how="left")
+            final_df["publication count"] = final_df["publication count"].fillna(0).astype(int)
 
-        # Step 4: Merge into final project-level dataframe
-        final_df = final_df.merge(pub_count, on="PROJECT_NUMBER", how="left")
-        final_df["publication count"] = final_df["publication count"].fillna(0).astype(int)
+            if logger:
+                logger.info(f" Merged unique publication counts: {final_df.shape[0]:,} rows × {final_df.shape[1]:,} columns")
 
-        if logger:
-            logger.info(f" Merged unique publication counts: {final_df.shape[0]:,} rows × {final_df.shape[1]:,} columns")
-
-    except Exception as e:
-        if logger:
-            logger.error(" Failed to compute publication counts", exc_info=True)
+        except Exception as e:
+            if logger:
+                logger.error(" Failed to compute publication counts", exc_info=True)
 
 
 # 🧬 Patent count using unique PROJECT_NUMBER + PATENT_ID pairs
@@ -116,10 +106,10 @@ def aggregate_project_outputs(
             final_df["clinical study count"] = final_df["clinical study count"].fillna(0).astype(int)
 
             if logger:
-                logger.info(f"✅ Merged unique clinical study count: {final_df.shape[0]:,} rows × {final_df.shape[1]:,} columns")
+                logger.info(f" Merged unique clinical study count: {final_df.shape[0]:,} rows × {final_df.shape[1]:,} columns")
 
         except Exception as e:
             if logger:
-                logger.error("❌ Failed to compute or merge clinical study counts", exc_info=True)
+                logger.error(" Failed to compute or merge clinical study counts", exc_info=True)
 
     return final_df
