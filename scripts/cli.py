@@ -5,6 +5,10 @@ import json
 # Add project root to Python path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
+print("🔍 sys.path:")
+for p in sys.path:
+    print(" ", p)
+
 import argparse
 import pandas as pd
 from scripts.config_loader import load_config
@@ -92,12 +96,18 @@ def main():
     enrich_parser.add_argument("--output", required=True, help="Path to output CSV")
     enrich_parser.add_argument("--stopwords", action="store_true", help="Remove English stopwords during keyword enrichment")
 
+    # 📦 Training step
     train_parser = subparsers.add_parser("train", help="Run full pipeline and export ML training + dropped CSVs")
     train_parser.add_argument("--config", required=True, help="Path to config.yaml")
     train_parser.add_argument("--stopwords", action="store_true", help="Remove stopwords during keyword enrichment")
 
+    # 🧪 New: Export appended_dict for validation
+    export_parser = subparsers.add_parser("export_dict", help="Run pipeline up to appended_dict and export as pickles")
+    export_parser.add_argument("--config", required=True, help="Path to config.yaml")
+    export_parser.add_argument("--export_dir", required=True, help="Directory to export pickled DataFrames")
 
     args = parser.parse_args()
+    print(f" Parsed command: {args.command}")
 
     if args.command == "preprocess":
         preprocess(args.config, args.output, args.summary_json)
@@ -107,6 +117,32 @@ def main():
     
     elif args.command == "train":
         finalize_training_dataset(args.config)
+
+    elif args.command == "export_dict":
+        print(" Entering export_dict block")
+        from scripts.config_loader import load_config
+        from scripts.logger import configure_logger
+        from scripts.loader import load_dataframes
+        from scripts.preprocessing import rename_dataframe_columns
+        from scripts.merge import append_dataframes_by_folder
+
+        import os
+        import pandas as pd
+
+        config = load_config(args.config)
+        logger = configure_logger(config=config)
+
+        raw_dict = load_dataframes(args.config, logger)
+        rename_dict = rename_dataframe_columns(config, raw_dict, logger)
+        appended_dict = append_dataframes_by_folder(config, rename_dict, logger)
+
+        os.makedirs(args.export_dir, exist_ok=True)
+
+        print(" Exporting the following keys:", list(appended_dict.keys()))  # Sanity print
+        for name, df in appended_dict.items():
+            path = os.path.join(args.export_dir, f"{name}.pkl")
+            df.to_pickle(path)
+            print(f" Saved {name}.pkl to {path}")
 
 if __name__ == "__main__":
     main()

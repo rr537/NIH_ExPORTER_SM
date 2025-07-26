@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from scripts.config_loader import load_config
 from scripts.loader import load_dataframes
 from scripts.logger import configure_logger
@@ -14,6 +18,7 @@ from typing import Dict, Tuple, List, Optional
 from scripts.training import create_ml_training_df, export_training_dataframe
 from datetime import datetime
 
+
 # Pipeline to construct a single ML Dataframe with study outcome metrics (publication, patent, clinical study counts)
 def full_ml_pipeline(config_path: str, logger: Optional[logging.Logger] = None) -> pd.DataFrame:
     config = load_config(config_path)
@@ -23,6 +28,7 @@ def full_ml_pipeline(config_path: str, logger: Optional[logging.Logger] = None) 
     raw_dict = load_dataframes(config_path, logger)
     rename_dict = rename_dataframe_columns(config, raw_dict, logger)
     appended_dict = append_dataframes_by_folder(config, rename_dict, logger)
+
     linked_dict = merge_linked_dataframes(appended_dict, logger)
     aggregate_df = aggregate_project_outputs(linked_dict, appended_dict, logger)
     dedup_df , _ = remove_true_duplicates_from_df(aggregate_df, logger)

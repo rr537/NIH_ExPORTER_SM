@@ -1,3 +1,6 @@
+from datetime import datetime
+date_string = datetime.today().strftime("%Y-%m-%d")
+
 configfile: "config/config.yaml"
 
 rule preprocess:
@@ -44,4 +47,21 @@ rule finalize_training:
     shell:
         """
         python scripts/cli.py train --config {input.config} --stopwords --log-file {log} > {log} 2>&1
+        """
+
+rule export_appended_dict:
+    input:
+        script="scripts/cli.py",
+        config="config/config.yaml"
+    output:
+        expand("validation_output/appended_dict/{name}.pkl", name=[
+            "ClinicalStudies", "Patents", "PRJ", "PRJABS", "PUB", "PUBLINK"
+        ])
+    params:
+        export_dir="validation_output/appended_dict"
+    shell:
+        """
+        python {input.script} export_dict \
+        --config {input.config} \
+        --export_dir {params.export_dir}
         """

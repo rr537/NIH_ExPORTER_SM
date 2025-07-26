@@ -36,7 +36,7 @@ def count_unique_pairs(
 
 def aggregate_project_outputs(
     linked_merged: Dict[str, pd.DataFrame],
-    merged_dataframes: Dict[str, pd.DataFrame],
+    appended_dict: Dict[str, pd.DataFrame],
     logger: Optional[logging.Logger] = None
 ) -> pd.DataFrame:
     """
@@ -47,7 +47,7 @@ def aggregate_project_outputs(
     final_df = prj_df
 
 # 📚 Publication count via PROJECT_NUMBER + PMID combination
-    publications = merged_dataframes.get("PUBLINK")
+    publications = appended_dict.get("PUBLINK")
     if publications is not None:
         try:
             # Step 1: Normalize columns for consistency
@@ -69,7 +69,7 @@ def aggregate_project_outputs(
 
 
 # 🧬 Patent count using unique PROJECT_NUMBER + PATENT_ID pairs
-    patents = merged_dataframes.get("Patents")
+    patents = appended_dict.get("Patents")
     if patents is not None:
         try:
             
@@ -91,7 +91,7 @@ def aggregate_project_outputs(
                 logger.error(" Failed to compute or merge patent counts", exc_info=True)
 
 # 🧪 Clinical study count using unique PROJECT_NUMBER + ClinicalTrials.gov ID pairs
-    studies = merged_dataframes.get("ClinicalStudies")
+    studies = appended_dict.get("ClinicalStudies")
     if studies is not None:
         try:
             # Step 1: Normalize columns for consistency
