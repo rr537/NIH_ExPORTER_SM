@@ -2,6 +2,38 @@ import pandas as pd
 import logging
 from typing import Dict, Optional
 
+def normalize_columns(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    """
+    Strips whitespace and uppercases values in specified columns to normalize formatting.
+    """
+    for col in cols:
+        if col in df.columns:
+            df[col] = df[col].astype(str).str.strip().str.upper()
+    return df
+
+def count_unique_pairs(
+    df: pd.DataFrame,
+    combo_cols: list[str],
+    count_name: str,
+    logger: Optional[logging.Logger] = None
+) -> pd.DataFrame:
+    
+    try:
+        duplicates = df.duplicated(subset=combo_cols, keep=False)
+        if logger:
+            logger.info(f" Found {duplicates.sum():,} duplicated combos in {count_name}.")
+        unique = df.drop_duplicates(subset=combo_cols)
+        return (
+            unique.groupby("PROJECT_NUMBER")
+            .size()
+            .reset_index(name=count_name)
+        )
+    except Exception as e:
+        if logger:
+            logger.error(f" Failed to process {count_name}", exc_info=True)
+        return pd.DataFrame(columns=["PROJECT_NUMBER", count_name])
+
+
 def aggregate_project_outputs(
     linked_merged: Dict[str, pd.DataFrame],
     merged_dataframes: Dict[str, pd.DataFrame],
@@ -11,7 +43,6 @@ def aggregate_project_outputs(
     Aggregates publication, patent, and clinical study counts by PROJECT_NUMBER
     into a unified project-level DataFrame.
     """
-
     prj_df = linked_merged["PRJ_PRJABS"].copy()
     final_df = prj_df
 
@@ -19,22 +50,13 @@ def aggregate_project_outputs(
     publications = merged_dataframes.get("PUBLINK")
     if publications is not None:
         try:
-            # Step 2: Detect and log duplicate combinations
-            duplicate_combos = publications.duplicated(subset=["PROJECT_NUMBER", "PMID"], keep=False)
-            num_duplicates = duplicate_combos.sum()
+            # Step 1: Normalize columns for consistency
+            publications = normalize_columns(publications, ["PMID", "PROJECT_NUMBER"])
 
-            if logger:
-                logger.info(f" Found {num_duplicates:,} duplicated PROJECT_NUMBER + PMID pairs in PUB_PUBLINK.")
+            # Step 2: Count unique PROJECT_NUMBER + PMID pairs
+            pub_count = count_unique_pairs(publications, ["PROJECT_NUMBER", "PMID"], "publication count", logger)
 
-            # Step 3: Count unique combinations per PROJECT_NUMBER
-            unique_combos = publications.drop_duplicates(subset=["PROJECT_NUMBER", "PMID"])  # Keep first occurrence
-            pub_count = (
-                unique_combos.groupby("PROJECT_NUMBER")
-                .size()
-                .reset_index(name="publication count")
-            )
-
-            # Step 4: Merge into final project-level dataframe
+            # Step 3: Merge into final project-level dataframe
             final_df = final_df.merge(pub_count, on="PROJECT_NUMBER", how="left")
             final_df["publication count"] = final_df["publication count"].fillna(0).astype(int)
 
@@ -50,25 +72,14 @@ def aggregate_project_outputs(
     patents = merged_dataframes.get("Patents")
     if patents is not None:
         try:
-            # Step 1: Concatenate PROJECT_NUMBER and PATENT_ID
-            patents["project_patent_combo"] = patents["PROJECT_NUMBER"].astype(str) + "_" + patents["PATENT_ID"].astype(str)
+            
+            #Step 1: Normalize columns for consistency
+            patents = normalize_columns(patents, ["PROJECT_NUMBER", "PATENT_ID"])
+            
+            # Step 2: Count unique PROJECT_NUMBER + PATENT_ID pairs
+            patent_count = count_unique_pairs(patents, ["PROJECT_NUMBER", "PATENT_ID"], "patent count", logger)
 
-            # Step 2: Identify duplicates
-            duplicate_patent_combos = patents.duplicated(subset=["project_patent_combo"], keep=False)
-            num_patent_duplicates = duplicate_patent_combos.sum()
-
-            if logger:
-                logger.info(f" Found {num_patent_duplicates:,} duplicated PROJECT_NUMBER + PATENT_ID combinations in Patents data.")
-
-            # Step 3: Count unique combinations per PROJECT_NUMBER
-            unique_patents = patents.drop_duplicates(subset=["project_patent_combo"])
-            patent_count = (
-                unique_patents.groupby("PROJECT_NUMBER")
-                .size()
-                .reset_index(name="patent count")
-            )
-
-            # Step 4: Merge into final_df
+            # Step 3: Merge into final_df
             final_df = final_df.merge(patent_count, on="PROJECT_NUMBER", how="left")
             final_df["patent count"] = final_df["patent count"].fillna(0).astype(int)
 
@@ -83,25 +94,13 @@ def aggregate_project_outputs(
     studies = merged_dataframes.get("ClinicalStudies")
     if studies is not None:
         try:
-            # Step 1: Concatenate PROJECT_NUMBER and ClinicalTrials.gov ID
-            studies["project_study_combo"] = studies["PROJECT_NUMBER"].astype(str) + "_" + studies["ClinicalTrials.gov ID"].astype(str)
-
-            # Step 2: Identify duplicates
-            duplicate_study_combos = studies.duplicated(subset=["project_study_combo"], keep=False)
-            num_study_duplicates = duplicate_study_combos.sum()
-
-            if logger:
-                logger.info(f" Found {num_study_duplicates:,} duplicated PROJECT_NUMBER + ClinicalTrials.gov ID combinations in ClinicalStudies data.")
-
-            # Step 3: Count unique combinations per PROJECT_NUMBER
-            unique_studies = studies.drop_duplicates(subset=["project_study_combo"])
-            study_count = (
-                unique_studies.groupby("PROJECT_NUMBER")
-                .size()
-                .reset_index(name="clinical study count")
-            )
-
-            # Step 4: Merge into final_df
+            # Step 1: Normalize columns for consistency
+            studies = normalize_columns(studies, ["PROJECT_NUMBER", "CLINICAL_TRIAL_ID"])
+            
+            # Step 2: Count unique PROJECT_NUMBER + ClinicalTrials.gov ID pairs
+            study_count = count_unique_pairs(studies, ["PROJECT_NUMBER", "CLINICAL_TRIAL_ID"], "clinical study count", logger)
+            
+            # Step 3: Merge into final_df
             final_df = final_df.merge(study_count, on="PROJECT_NUMBER", how="left")
             final_df["clinical study count"] = final_df["clinical study count"].fillna(0).astype(int)
 

@@ -120,6 +120,11 @@ def merge_linked_dataframes(
     # 🔗 Merge PRJ + PRJABS
     if prj is not None and prjabs is not None:
         try:
+            
+            # Ensure APPLICATION_ID is string and stripped for consistency
+            prj["APPLICATION_ID"] = prj["APPLICATION_ID"].astype(str).str.strip().str.upper()
+            prjabs["APPLICATION_ID"] = prjabs["APPLICATION_ID"].astype(str).str.strip().str.upper()
+
             joined = pd.merge(prj, prjabs, on="APPLICATION_ID", how="left")
             merged_outputs["PRJ_PRJABS"] = joined
             if logger:
