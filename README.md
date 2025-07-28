@@ -10,8 +10,8 @@ Features:
 - Parallel processing support for large datasets
 - Snakemake-powered reproducibility
 
-Directory Structure:
-'''text
+Directory Structure
+```text
 project-root/
 ├── config/
 │   └── config.yaml
@@ -32,7 +32,7 @@ project-root/
 │   ├── loader.py
 │   └── logger.py
 └── Snakefile
-'''
+```
 
 Usage:
 # Setup environment
