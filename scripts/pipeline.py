@@ -43,26 +43,23 @@ def full_ml_pipeline(config_path: str, logger: Optional[logging.Logger] = None) 
 
     dedup_summary = pd.concat([outcomes_dedup_summary, df_dedup_summary], ignore_index=True)
     dedup_summary.to_csv(dedup_summary_path, index=False)
-
-    total_missing_headers = validate_csv_headers_from_df(config, dedup_df, logger)
-    ml_df = drop_specified_columns_from_df(config, dedup_df, logger)
  
-    if ml_df.empty:
+    if dedup_df.empty:
         logger.warning(" ML DataFrame construction failed — received empty output.")
     else:
-        logger.info(f" ML DataFrame ready: {ml_df.shape[0]:,} rows × {ml_df.shape[1]:,} columns")
+        logger.info(f" ML DataFrame ready: {dedup_df.shape[0]:,} rows × {dedup_df.shape[1]:,} columns")
 
-    return ml_df
+    return dedup_df
 
 # Pipeline to construct a single ML Dataframe with study outcome metrics + enrich with additional keyword information. Includes keyword counts and flagging
 def full_enrichment_pipeline(config_path: str, remove_stopwords: bool = False) -> pd.DataFrame:
     config = load_config(config_path)
-
     logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
-    ml_df = full_ml_pipeline(config_path, logger)
+
+    dedup_df = full_ml_pipeline(config_path, logger)
 
     treatments, diseases = prepare_keywords(config, logger, remove_stopwords=remove_stopwords)
-    enriched_df = enrich_with_keyword_metrics(ml_df, config, treatments, diseases, logger)
+    enriched_df = enrich_with_keyword_metrics(dedup_df, config, treatments, diseases, logger)
 
     return enriched_df
 
@@ -72,41 +69,52 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
     logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
 
     # 🔃 Full pipeline logic in-place for traceability
-    raw = load_dataframes(config_path, logger)
-    cleaned, column_summary, total_dup_removed = clean_dataframes(config, raw, logger)
+    raw_dict = load_dataframes(config_path, logger)
+    rename_dict = rename_dataframe_columns(config, raw_dict, logger)
+    appended_dict = append_dataframes_by_folder(config, rename_dict, logger)
 
-    appended_df = append_dataframes_by_folder(config, cleaned, logger)
-    linked_df = merge_linked_dataframes(appended_df, logger)
-    aggregate_df = aggregate_project_outputs(linked_df, appended_df, logger)
-    ml_df , total_duplicates_removed = deduplicate_single_dataframe(aggregate_df, logger)
+    linked_dict = merge_linked_dataframes(appended_dict, logger)
+    aggregate_df, outcomes_dedup_summary = aggregate_project_outputs(linked_dict, appended_dict, logger)
+    dedup_df , df_dedup_summary = remove_true_duplicates_from_df(aggregate_df, logger)
 
-    treatments, diseases = prepare_keywords(config, logger, remove_stopwords)
-    enriched_df = enrich_with_keyword_metrics(ml_df, config, treatments, diseases, logger)
+    dedup_summary = pd.concat([outcomes_dedup_summary, df_dedup_summary], ignore_index=True)
+    dedup_summary.to_csv(dedup_summary_path, index=False)
+
+    if dedup_df.empty:
+        logger.warning(" ML DataFrame construction failed — received empty output.")
+    else:
+        logger.info(f" ML DataFrame ready: {dedup_df.shape[0]:,} rows × {dedup_df.shape[1]:,} columns")
+
+    treatments, diseases = prepare_keywords(config, logger, remove_stopwords=remove_stopwords)
+    enriched_df = enrich_with_keyword_metrics(dedup_df, config, treatments, diseases, logger)
+
     MLdf, dropped_df = create_ml_training_df(enriched_df, config, logger)
 
     # 📊 Flatten just for summary
-    appended_df_combined = pd.concat(list(appended_df.values()), ignore_index=True)
-    linked_df_summary = pd.concat(list(linked_df.values()), ignore_index=True)
-    deduped_df_combined = pd.concat(list(ml_df.values()), ignore_index=True) 
+    appended_df_combined = pd.concat(list(appended_dict.values()), ignore_index=True)
+    linked_df_summary = pd.concat(list(linked_dict.values()), ignore_index=True)
+    deduped_df_combined = pd.concat(list(dedup_df.values()), ignore_index=True) 
 
     # 📝 Export the final ML DataFrames
     export_training_dataframe(MLdf, config, logger, filename="MLdf_training.csv")
     export_training_dataframe(dropped_df, config, logger, filename="MLdf_dropped.csv")
 
     # 🧠 If 'flagged' column is missing, use defaults
-    if 'flagged' not in enriched_df.columns:
+    if 'flagged' not in MLdf.columns:
         logger.warning(" No 'flagged' column found in enriched DataFrame — skipping keyword summary.")
         keyword_total = 0
         top_keywords = {}
     else:
-        keyword_total = enriched_df['flagged'].str.len().sum()
-        top_keywords = enriched_df['flagged'].explode().value_counts().head(5).to_dict()
+        keyword_total = MLdf['flagged'].str.len().sum()
+        top_keywords = MLdf['flagged'].explode().value_counts().head(5).to_dict()
 
     # 📊 Build summary report
     summary_stats = {
         "initial_load": {
             "folders_loaded": list(raw.keys()),
+
             "file_count": int(sum(len(folder) for folder in raw.values())),
+
             "total_raw_rows": int(sum(int(df.shape[0]) for folder in raw.values() for df in folder.values()))
         },
         "preprocessing": {
@@ -135,8 +143,10 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
         "enrichment": {
             "keyword_total": int(keyword_total),
             "top_keywords": {k: int(v) for k, v in top_keywords.items()}
+
         },
         "training_export": {
+
             "ml_training_rows": int(MLdf.shape[0]),
             "dropped_rows": int(dropped_df.shape[0])
         },

@@ -58,7 +58,6 @@ def load_keywords(config: dict, logger: logging.Logger, remove_stopwords: bool =
         treatments = enrich_keywords(raw_treatments, remove_stopwords=remove_stopwords)
         diseases = enrich_keywords(raw_diseases, remove_stopwords=remove_stopwords)
 
-        logger.info(f" Enriched: {len(treatments)} treatment variants, {len(diseases)} disease variants")
         return treatments, diseases
 
     except Exception as e:
