@@ -22,7 +22,7 @@ rule enrich_keywords:
         cleaned="results/cleaned.csv",
         config="config/config.yaml"
     output:
-        "results/enriched.csv"
+        enriched="results/enriched.csv"
     log:
         f"logs/enrich_keywords_{date_string}.log"
     conda:

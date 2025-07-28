@@ -17,7 +17,15 @@ import logging
 from typing import Dict, Tuple, List, Optional 
 from scripts.training import create_ml_training_df, export_training_dataframe
 from datetime import datetime
+import yaml
 
+# Load configuration
+# Assuming config.yaml is in the same directory as this script
+config_path = "config/config.yaml"
+with open(config_path, "r") as f:
+    config = yaml.safe_load(f)
+
+dedup_summary_path = config.get("paths", {}).get("dedup_summary_csv_path", "results/duplicate_summary.csv")
 
 # Pipeline to construct a single ML Dataframe with study outcome metrics (publication, patent, clinical study counts)
 def full_ml_pipeline(config_path: str, logger: Optional[logging.Logger] = None) -> pd.DataFrame:
@@ -30,8 +38,11 @@ def full_ml_pipeline(config_path: str, logger: Optional[logging.Logger] = None) 
     appended_dict = append_dataframes_by_folder(config, rename_dict, logger)
 
     linked_dict = merge_linked_dataframes(appended_dict, logger)
-    aggregate_df = aggregate_project_outputs(linked_dict, appended_dict, logger)
-    dedup_df , _ = remove_true_duplicates_from_df(aggregate_df, logger)
+    aggregate_df, outcomes_dedup_summary = aggregate_project_outputs(linked_dict, appended_dict, logger)
+    dedup_df , df_dedup_summary = remove_true_duplicates_from_df(aggregate_df, logger)
+
+    dedup_summary = pd.concat([outcomes_dedup_summary, df_dedup_summary], ignore_index=True)
+    dedup_summary.to_csv(dedup_summary_path, index=False)
 
     total_missing_headers = validate_csv_headers_from_df(config, dedup_df, logger)
     ml_df = drop_specified_columns_from_df(config, dedup_df, logger)

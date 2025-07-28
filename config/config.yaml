@@ -145,4 +145,8 @@ loglevel: DEBUG
 logs_dir: logs
 log_file: nih_export_log.txt
 workers: 11
+
+# 📂 Output settings
 output_dir: results
+paths:
+  dedup_summary_csv_path: results/dedup_summary.csv

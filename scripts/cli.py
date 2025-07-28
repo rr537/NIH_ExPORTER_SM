@@ -5,7 +5,7 @@ import json
 # Add project root to Python path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-print("🔍 sys.path:")
+print("sys.path:")
 for p in sys.path:
     print(" ", p)
 
