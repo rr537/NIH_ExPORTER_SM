@@ -11,6 +11,7 @@ Features:
 - Snakemake-powered reproducibility
 
 Directory Structure:
+'''text
 project-root/
 ├── config/
 │   └── config.yaml
@@ -31,6 +32,7 @@ project-root/
 │   ├── loader.py
 │   └── logger.py
 └── Snakefile
+'''
 
 Usage:
 # Setup environment
