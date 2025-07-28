@@ -34,7 +34,7 @@ def full_ml_pipeline(config_path: str, logger: Optional[logging.Logger] = None) 
         logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
 
     raw_dict = load_dataframes(config_path, logger)
-    rename_dict = rename_dataframe_columns(config, raw_dict, logger)
+    rename_dict, rename_log = rename_dataframe_columns(config, raw_dict, logger)
     appended_dict = append_dataframes_by_folder(config, rename_dict, logger)
 
     linked_dict = merge_linked_dataframes(appended_dict, logger)
@@ -70,7 +70,7 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
 
     # 🔃 Full pipeline logic in-place for traceability
     raw_dict = load_dataframes(config_path, logger)
-    rename_dict = rename_dataframe_columns(config, raw_dict, logger)
+    rename_dict, rename_log = rename_dataframe_columns(config, raw_dict, logger)
     appended_dict = append_dataframes_by_folder(config, rename_dict, logger)
 
     linked_dict = merge_linked_dataframes(appended_dict, logger)
@@ -93,7 +93,6 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
     # 📊 Flatten just for summary
     appended_df_combined = pd.concat(list(appended_dict.values()), ignore_index=True)
     linked_df_summary = pd.concat(list(linked_dict.values()), ignore_index=True)
-    deduped_df_combined = pd.concat(list(dedup_df.values()), ignore_index=True) 
 
     # 📝 Export the final ML DataFrames
     export_training_dataframe(MLdf, config, logger, filename="MLdf_training.csv")
@@ -111,43 +110,39 @@ def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) 
     # 📊 Build summary report
     summary_stats = {
         "initial_load": {
-            "folders_loaded": list(raw.keys()),
+            "folders_loaded": list(raw_dict.keys()),
 
-            "file_count": int(sum(len(folder) for folder in raw.values())),
+            "file_count": int(sum(len(folder) for folder in raw_dict.values())),
 
-            "total_raw_rows": int(sum(int(df.shape[0]) for folder in raw.values() for df in folder.values()))
+            "total_raw_rows": int(sum(int(df.shape[0]) for folder in raw_dict.values() for df in folder.values()))
         },
         "preprocessing": {
-            "cleaned_rows": int(sum(df.shape[0] for folder in cleaned.values() for df in folder.values())),
-            "columns_dropped": {folder: column_summary[folder]["dropped_columns"] for folder in column_summary},
-            "columns_renamed": {folder: column_summary[folder]["renamed_columns"] for folder in column_summary},
-            "duplicates_removed": int(total_dup_removed)
+            "columns_renamed": rename_log
         },
         "appended": {
             "total_rows": int(appended_df_combined.shape[0]),
             "total_columns": int(appended_df_combined.shape[1]),
         },
-        "deduped": {
-            "total_rows_after_deduplication": int(deduped_df_combined.shape[0]),
-            "duplicates_removed": int(total_duplicates_removed)
-        },
         "linked": {
             "total_rows_after_merge": int(linked_df_summary.shape[0]),
-            "merged_sources": list(linked_df.keys()),
+            "merged_sources": list(linked_df_summary.keys()),
             "total_columns_after_merge": int(linked_df_summary.shape[1])
         },
-        "aggregated": {
-            "ml_df_rows": int(ml_df.shape[0]),
-            "ml_df_columns": int(ml_df.shape[1])
+        "deduplication": {
+            row["category"]: {
+                "unique_duplicate_rows": int(row["unique_duplicate_rows"]),
+                "total_duplicates": int(row["total_duplicates"]),
+                "extra_duplicates": int(row["extra_duplicates"])
+            }
+            for _, row in df_dedup_summary.iterrows()
         },
         "enrichment": {
             "keyword_total": int(keyword_total),
             "top_keywords": {k: int(v) for k, v in top_keywords.items()}
-
         },
         "training_export": {
-
             "ml_training_rows": int(MLdf.shape[0]),
+            "ml_training_columns": int(MLdf.shape[1]),
             "dropped_rows": int(dropped_df.shape[0])
         },
         "run_metadata": {

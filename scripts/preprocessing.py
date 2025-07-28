@@ -74,28 +74,40 @@ def drop_specified_columns_from_df(
 
     return df
 
+from typing import Tuple, Dict
+import pandas as pd
+import logging
+
 def rename_dataframe_columns(
     config: dict,
-    dataframes: Dict[str, Dict[str, pd.DataFrame]],
+    raw_dict: Dict[str, Dict[str, pd.DataFrame]],
     logger: logging.Logger
-) -> Dict[str, Dict[str, pd.DataFrame]]:
+) -> Tuple[Dict[str, Dict[str, pd.DataFrame]], Dict[str, list]]:
     """
-    Applies renaming rules to all DataFrames using config['rename_columns_map'].
+    Applies renaming rules to all DataFrames using config['rename_columns_map'],
+    logging detailed column changes and returning the renamed structure.
+    
+    Returns:
+        - renamed_dict: DataFrames with updated column names
+        - rename_summary: Dict summarizing per-file column changes
     """
-    logger.info(" Renaming columns...")
+    logger.info("Renaming columns using configured rules...")
     rename_mapping = config.get("rename_columns_map", {})
+    rename_summary = {}
+    renamed_dict = {}
 
     if not rename_mapping:
         logger.warning(" No renaming rules found in config['rename_columns_map'].")
-        return
+        return raw_dict, rename_summary
 
-    logger.info(f" Loaded {len(rename_mapping)} renaming rules from config.")
+    logger.info(f" Loaded {len(rename_mapping)} column renaming rules.")
 
-    for folder, files in dataframes.items():
+    for folder, files in raw_dict.items():
+        renamed_dict[folder] = {}
         for file_name, df in files.items():
             original = df.columns.tolist()
-            df.rename(columns=rename_mapping, inplace=True)
-            updated = df.columns.tolist()
+            df_renamed = df.rename(columns=rename_mapping)
+            updated = df_renamed.columns.tolist()
 
             changed = [
                 f"{old} -> {rename_mapping[old]}"
@@ -105,4 +117,8 @@ def rename_dataframe_columns(
 
             if changed:
                 logger.info(f"[{file_name}] Renamed {len(changed)} column(s): {', '.join(changed)}")
-    return dataframes
+                rename_summary[file_name] = changed
+
+            renamed_dict[folder][file_name] = df_renamed
+
+    return renamed_dict, rename_summary
