@@ -16,7 +16,6 @@ To overcome querying limits in both RePORTER and its API, this pipeline accelera
 ---
 
 ## Pipeline Overview
-Step 1: Data Loading 
 
 ### Step 1: Data Loading
 Ingests 6 NIH ExPORTER sources (CSV format):
@@ -103,24 +102,31 @@ project-root/
 ##  Usage
 
 ### 🔧 Setup
+
 ```bash
+# Create the environment
 conda env create -f envs/nih.yml
+
+# Activate the environment
 conda activate nih_env
 ```
 
 ### 🐍 Run Workflow 
 ```bash
-# Full pipeline (WIP)
+# Full pipeline (Note: finalize_training is a placeholder rule and may require adjustment.)
 snakemake --use-conda --cores 4 finalize_training
 
 # Manual CLI execution
+# Preprocessing step
 python scripts/cli.py preprocess --config config/config.yaml \
                                  --output results/cleaned.csv \
                                  --summary-json results/preprocessing_summary.json
 
+# Keyword enrichment
 python scripts/cli.py enrich --config config/config.yaml \
                              --output results/enriched.csv
 
+# ML training dataset creation
 python scripts/cli.py train --config config/config.yaml --stopwords
 ```
 
