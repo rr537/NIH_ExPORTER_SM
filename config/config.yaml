@@ -10,38 +10,6 @@ subfolders:
   - PUB
   - PUBLINK
 
-drop_col_header_map:
-  PRJ:
-    - ARRA_FUNDED
-    - CFDA_CODE
-    - ED_INST_TYPE
-    - OPPORTUNITY NUMBER
-    - FUNDING_ICs
-    - NIH_SPENDING_CATS
-    - ORG_DEPT
-    - ORG_DISTRICT
-    - ORG_FIPS
-    - ORG_IPF_CODE
-    - ORG_ZIPCODE
-    - PI_IDS
-    - PROGRAM_OFFICER_NAME
-    - SERIAL_NUMBER
-    - STUDY_SECTION
-    - STUDY_SECTION_NAME
-  PRJABS: []
-  PUB:
-    - AFFILIATION
-    - AUTHOR_LIST
-    - COUNTRY
-    - JOURNAL_ISSUE
-    - JOURNAL_TITLE
-    - JOURNAL_VOLUME
-    - LANG
-    - PAGE_NUMBER
-  PUBLINK: []
-  Patents: []
-  ClinicalStudies: []
-
 rename_columns_map:
   CORE_PROJECT_NUM: PROJECT_NUMBER
   PROJECT_ID: PROJECT_NUMBER
