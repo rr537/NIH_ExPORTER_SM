@@ -1,6 +1,13 @@
 # 🧬 NIH ExPORTER ML Pipeline
 
-A scalable and modular Snakemake workflow for processing NIH ExPORTER datasets into machine learning–ready training files—optimized for rare disease modeling. Features include robust preprocessing, keyword enrichment via FlashText, and configurable training data generation.
+![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)
+![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-yellow)
+![Snakemake Workflow](https://img.shields.io/badge/Workflow-Snakemake-purple)
+![Issues](https://img.shields.io/github/issues/rr537/NIH_ExPORTER_SM)
+![Last Commit](https://img.shields.io/github/last-commit/rr537/NIH_ExPORTER_SM)
+![Stars](https://img.shields.io/github/stars/rr537/NIH_ExPORTER_SM?style=social)
+
+A scalable and modular Snakemake workflow for processing NIH ExPORTER datasets into machine learning–ready training files—optimized for finding CRISPR/gene therapy related treatments for rare diseases. Features include preprocessing, keyword enrichment via FlashText, and configurable training data generation.
 
 ---
 
@@ -81,6 +88,14 @@ project-root/
 ├── envs/
 │   └── nih.yml
 ├── logs/
+├── data/
+│   └── raw/
+│       ├── Projects/
+│       ├── Abstracts/
+│       ├── Publications/
+│       ├── Patents/
+│       ├── Clinical Studies/
+│       └── Linked Publications/
 ├── results/
 ├── scripts/
 │   ├── cli.py
@@ -94,7 +109,9 @@ project-root/
 │   ├── training.py
 │   ├── loader.py
 │   └── logger.py
-└── Snakefile
+├── Snakefile
+├── LICENSE.md
+└── README.md
 ```
 
 ---
@@ -189,5 +206,17 @@ Note: There is no functional distinction between entries listed under `treatment
 | total count         | Total matched keywords (treatment + disease)     |
 | total unique count  | Count of unique keyword matches                  |
 | flagged             | List of matched keyword terms per row            |
+
+---
+
+## Citation 
+
+@misc{racharaks2025pipeline,
+  author       = {Ratanachat Racharaks},
+  title        = {NIH Keyword-Enrichment and ML Training Pipeline},
+  year         = {2025},
+  howpublished = {\url{https://github.com/rr537/NIH_ExPORTER_SM}},
+  note         = {Distributed under the MIT License}
+}
 
 ---
