@@ -115,7 +115,7 @@ def aggregate_project_outputs(
     if studies is not None:
         try:
             # Step 1: Normalize columns for consistency
-            studies = normalize_columns(studies, ["PROJECT_NUMBER", "CLINICAL_TRIAL_ID"])
+            studies = normalize_columns(studies, ["PROJECT_NUMBER", "ClinicalTrials.gov ID"])
             
             # Step 2: Count unique PROJECT_NUMBER + ClinicalTrials.gov ID pairs
             study_count, study_summary = count_unique_pairs(studies, ["PROJECT_NUMBER", "ClinicalTrials.gov ID"], "clinical study count", logger)
