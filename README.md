@@ -118,7 +118,30 @@ project-root/
 
 ##  Usage
 
+## 📦 Dependencies
+
+This project uses the `nih_env` Conda environment for reproducible data processing and ML pipeline execution.
+
+Environment configuration (`environment.yml`):
+
+- **Channels**
+  - `conda-forge`
+  - `defaults`
+
+- **Dependencies**
+  - `python=3.11`
+  - `pandas=2.3.0`
+  - `numpy=2.3.0`
+  - `pyarrow=20.0.0`
+  - `flashtext=2.7`
+  - `nltk=3.9.1`
+  - `unidecode` (latest)
+  - `tqdm=4.67.1`
+  - `pyyaml`
+
 ### 🔧 Setup
+
+To recreate this environment:
 
 ```bash
 # Create the environment
