@@ -234,12 +234,7 @@ Note: There is no functional distinction between entries listed under `treatment
 
 ## Citation 
 
-@misc{racharaks2025pipeline,
-  author       = {Ratanachat Racharaks},
-  title        = {NIH Keyword-Enrichment and ML Training Pipeline},
-  year         = {2025},
-  howpublished = {\url{https://github.com/rr537/NIH_ExPORTER_SM}},
-  note         = {Distributed under the MIT License}
-}
+APA Style (7th edition)
+Racharaks, R. (2025). NIH Keyword-Enrichment and ML Training Pipeline. GitHub. https://github.com/rr537/NIH_ExPORTER_SM
 
 ---
