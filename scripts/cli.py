@@ -11,60 +11,76 @@ for p in sys.path:
 
 import argparse
 import pandas as pd
+from typing import Dict, Tuple, List, Optional, Any  
 from scripts.config_loader import load_config
 from scripts.logger import configure_logger
 from scripts.loader import load_dataframes
-from scripts.pipeline import full_enrichment_pipeline, full_ml_pipeline, finalize_training_dataset
+from scripts.pipeline import preprocess_pipeline, full_enrichment_pipeline, full_ml_pipeline, finalize_training_dataset
 from scripts.keywords import load_keywords
 from scripts.enrichment import enrich_with_keyword_metrics
 from scripts.loader import (validate_data_sources, validate_folder_path)
 
 
-def preprocess(config_path: str, output_path: str, summary_path: str = None):
+def preprocess(config_path: str, output_path: str, summary_path: str = None)-> Tuple[Dict[str, pd.DataFrame], List[str], Dict[str, Any]]:
+    # 1. Load configuration and set up logger
     config = load_config(config_path)
     logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
 
+    # 2. Resolve output directory
+    output_dir = Path(output_path if output_path else config.get("output_dir", "results")).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 3. Validate config paths and data sources
     validate_folder_path(config_path, logger)
     validate_data_sources(config_path, logger)
 
-    raw_data = load_dataframes(config_path, logger)
-    cleaned_data, column_summary, total_dup_removed = clean_dataframes(config, raw_data, logger)
+    # 4. Run preprocessing pipeline
+    appended_dict, rename_log, load_summary = preprocess_pipeline(config=config, logger=logger)
 
-    # Combine all cleaned DataFrames across folders
-    all_frames = [
-        df for folder_dfs in cleaned_data.values()
-        for df in folder_dfs.values()
-    ]
-    unified_df = pd.concat(all_frames, ignore_index=True)
+    # 5. Export each appended DataFrame to pickle
+    print(" Exporting the following keys:", list(appended_dict.keys()))
+    for name, df in appended_dict.items():
+        path = output_dir / f"{name}.pkl"
+        df.to_pickle(path)
+        print(f" Saved {name}.pkl to {path}")
 
-    if summary_path:
-        summary = {
-            "preprocessing": {
-                "folders_loaded": list(raw_data.keys()),
-                "file_count": int(sum(len(folder) for folder in raw_data.values())),
-                "total_raw_rows": int(sum(df.shape[0] for folder in raw_data.values() for df in folder.values())),
-                "cleaned_rows": int(sum(df.shape[0] for folder in cleaned_data.values() for df in folder.values())),
-                "columns_dropped": {
-                    folder: column_summary.get(folder, {}).get("dropped_columns", [])
-                    for folder in raw_data
-                },
-                "columns_renamed": {
-                    folder: column_summary.get(folder, {}).get("renamed_columns", [])
-                    for folder in raw_data
-                },
-                "duplicates_removed": int(total_dup_removed)
-            }
+    # 6. Combine data for summary statistics
+    appended_df_combined = pd.concat(list(appended_dict.values()), ignore_index=True)
+
+    # 7. Build and export preprocessing summary
+    
+    # If no summary path provided, use default
+    if summary_path is None:
+        summary_path = output_dir / "preprocessing_summary.json"
+    else:
+        summary_path = Path(summary_path).resolve()
+
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Build summary dictionary
+    summary = {
+        "initial_load": {"folder_stats": []},
+        "preprocessing": {"columns_renamed": rename_log},
+        "appended": {
+            "total_rows": int(appended_df_combined.shape[0]),
+            "total_columns": int(appended_df_combined.shape[1]),
         }
-        # 👇 Export summary JSON if path provided
-        os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-        with open(summary_path, "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2)
-        logger.info(f" Preprocessing summary exported to: {summary_path}")      
+    }
+    # Add initial load stats
+    for folder, stats in load_summary.items():
+        summary["initial_load"]["folder_stats"].append({
+            "folder": folder,
+            "file_count": stats["file_count"],
+            "total_raw_rows": stats["total_rows"],
+            "total_memory": f"{stats['total_memory']:.2f} MB"
+        })
+    # Add appended DataFrame stats
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+    logger.info(f" Preprocessing summary exported to: {summary_path}")
 
-    # 📁 Export unified cleaned DataFrame
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    unified_df.to_csv(output_path, index=False)
-    logger.info(f" Exported cleaned dataset to: {output_path}")
+    return appended_dict, rename_log, load_summary
+
 
 def enrich(config_path: str, output_path: str, remove_stopwords: bool = False):
     config = load_config(config_path)
@@ -74,7 +90,8 @@ def enrich(config_path: str, output_path: str, remove_stopwords: bool = False):
     validate_data_sources(config_path, logger)
 
     enriched_df = full_enrichment_pipeline(
-        config_path=config_path,
+        config=config,
+        logger=logger, 
         remove_stopwords=remove_stopwords
     )
     enriched_df.to_csv(output_path, index=False)

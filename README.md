@@ -234,7 +234,7 @@ Note: There is no functional distinction between entries listed under `treatment
 
 ## Citation 
 
-APA Style (7th edition)<br>
+**APA Style (7th edition)**<br>
 Racharaks, R. (2025). NIH Keyword-Enrichment and ML Training Pipeline. GitHub. https://github.com/rr537/NIH_ExPORTER_SM
 
 ---

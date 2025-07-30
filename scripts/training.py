@@ -63,4 +63,4 @@ def export_training_dataframe(
     out_path = output_dir / filename
     df.to_csv(out_path, index=False)
 
-    logger.info(f" ML training DataFrame saved to: {out_path}")
+    logger.info(f" {filename} saved to: {out_path}")

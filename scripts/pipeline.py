@@ -27,11 +27,18 @@ with open(config_path, "r") as f:
 
 dedup_summary_path = config.get("paths", {}).get("dedup_summary_csv_path", "results/duplicate_summary.csv")
 
+
+# Preprocess pipeline to constructed appended source data, exported as seperate pickle files 
+
+def preprocess_pipeline(config: dict, logger: logging.Logger) -> Dict[str, pd.DataFrame] :    
+    raw_dict, load_summary = load_dataframes(config_path, logger)
+    rename_dict, rename_log = rename_dataframe_columns(config, raw_dict, logger)
+    appended_dict = append_dataframes_by_folder(config, rename_dict, logger)
+
+    return appended_dict, rename_log, load_summary
+
 # Pipeline to construct a single ML Dataframe with study outcome metrics (publication, patent, clinical study counts)
-def full_ml_pipeline(config_path: str, logger: Optional[logging.Logger] = None) -> pd.DataFrame:
-    config = load_config(config_path)
-    if logger is None:
-        logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
+def full_ml_pipeline(config: dict, logger: Optional[logging.Logger] = None) -> pd.DataFrame:
 
     raw_dict = load_dataframes(config_path, logger)
     rename_dict, rename_log = rename_dataframe_columns(config, raw_dict, logger)
@@ -52,11 +59,9 @@ def full_ml_pipeline(config_path: str, logger: Optional[logging.Logger] = None) 
     return dedup_df
 
 # Pipeline to construct a single ML Dataframe with study outcome metrics + enrich with additional keyword information. Includes keyword counts and flagging
-def full_enrichment_pipeline(config_path: str, remove_stopwords: bool = False) -> pd.DataFrame:
-    config = load_config(config_path)
-    logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
+def full_enrichment_pipeline(config: dict, logger: logging.Logger, remove_stopwords: bool = False) -> pd.DataFrame:
 
-    dedup_df = full_ml_pipeline(config_path, logger)
+    dedup_df = full_ml_pipeline(config, logger)
 
     treatments, diseases = prepare_keywords(config, logger, remove_stopwords=remove_stopwords)
     enriched_df = enrich_with_keyword_metrics(dedup_df, config, treatments, diseases, logger)

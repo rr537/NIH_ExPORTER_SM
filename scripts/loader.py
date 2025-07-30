@@ -137,10 +137,24 @@ def load_dataframes(config_path: str, logger: logging.Logger) -> Dict[str, Dict[
 
     data_root = project_root / config["folder"]
 
-    return load_csv_files(
+    # Load CSV files from specified subfolders
+    raw_dict = load_csv_files(
         logger=logger,
         main_folder=str(data_root),
         subfolders=config["subfolders"],
         use_parallel=config.get("parallel", False),
         max_workers=config.get("workers", 4)
     )
+    
+    # Collect summary of loaded DataFrames
+    load_summary = {}
+
+    for folder, files in raw_dict.items():
+        load_summary[folder] = {
+            "folder": folder,
+            "file_count": len(files),
+            "total_rows": sum(df.shape[0] for df in files.values()),
+            "total_memory": sum(df.memory_usage().sum() for df in files.values()) / (1024 * 1024)  # MB
+        }
+
+    return raw_dict, load_summary
