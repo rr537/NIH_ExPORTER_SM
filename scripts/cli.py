@@ -52,36 +52,30 @@ def preprocess(
     # 6. Combine data for summary statistics 
     preprocess_combined_df = pd.concat(list(preprocess_dict.values()), ignore_index=True)
 
-    # 7.  Prepare metadata for build_summary()
+    # 7.  Prepare metadata for build_summary() 
     preprocess_metadata = {
-        "load_summary": [],
+        "load_summary": [
+            {
+                "folder": folder,
+                "file_count": stats["file_count"],
+                "total_raw_rows": stats["total_rows"],
+                "total_memory": f"{stats['total_memory']:.2f} MB",
+                **({
+                    "appended_rows": appended_summary[folder].get("total_rows", 0),
+                    "appended_columns": appended_summary[folder].get("total_columns", 0),
+                    "new_columns_added": appended_summary[folder].get("new_columns_added", 0),
+                    "unexpected_columns": appended_summary[folder].get("unexpected_columns", []),
+                    "skipped_due_to_mismatch": appended_summary[folder].get("skipped", False),
+                    "append_error": appended_summary[folder].get("error")
+                } if folder in appended_summary else {})
+            }
+            for folder, stats in load_summary.items()
+        ],
         "rename_summary": rename_summary,
         "total_rows": int(preprocess_combined_df.shape[0]),
         "total_columns": int(preprocess_combined_df.shape[1])
     }
 
-    for folder, stats in load_summary.items():
-        folder_summary = {
-            "folder": folder,
-            "file_count": stats["file_count"],
-            "total_raw_rows": stats["total_rows"],
-            "total_memory": f"{stats['total_memory']:.2f} MB"
-        }
-
-        # Add appended info if available
-        if folder in appended_summary:
-            append_stats = appended_summary[folder]
-            folder_summary.update({
-                "appended_rows": append_stats.get("total_rows", 0),
-                "appended_columns": append_stats.get("total_columns", 0),
-                "new_columns_added": append_stats.get("new_columns_added", 0),
-                "unexpected_columns": append_stats.get("unexpected_columns", []),
-                "skipped_due_to_mismatch": append_stats.get("skipped", False),
-                "append_error": append_stats.get("error")
-            })
-
-        preprocess_metadata["load_summary"].append(folder_summary)
-    
     # 8. Build summary statistics
     summary = build_summary(preprocess_stats=preprocess_metadata)
 
