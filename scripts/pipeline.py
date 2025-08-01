@@ -46,14 +46,12 @@ def metrics_pipeline(appended_dict: dict, logger: Optional[logging.Logger] = Non
     return dedup_df, linked_summary_dict, aggregate_outcomes_summary_dict, dedupe_summary_dict
 
 # Pipeline to construct a single ML Dataframe with study outcome metrics + enrich with additional keyword information. Includes keyword counts and flagging
-def full_enrichment_pipeline(combined_df, logger: logging.Logger, remove_stopwords: bool = False) -> pd.DataFrame:
+def keywords_pipeline(metrics_df, logger: logging.Logger, remove_stopwords: bool = False) -> pd.DataFrame:
 
-    dedup_df = full_ml_pipeline(config, logger)
+    treatments, diseases, keywords_summary = prepare_keywords(config, logger, remove_stopwords=remove_stopwords)
+    keywords_df, enrichment_summary = enrich_with_keyword_metrics(metrics_df, config, treatments, diseases, logger)
 
-    treatments, diseases = prepare_keywords(config, logger, remove_stopwords=remove_stopwords)
-    enriched_df = enrich_with_keyword_metrics(dedup_df, config, treatments, diseases, logger)
-
-    return enriched_df
+    return keywords_df, keywords_summary, enrichment_summary
 
 # Full pipeline to finalize the training dataset, includes study outcome metrics + keyword enrichment + finalization steps (dropping unnecessary columns, removing zero-count rows, and exporting the final DataFrames
 def finalize_training_dataset(config_path: str, remove_stopwords: bool = False) -> None:

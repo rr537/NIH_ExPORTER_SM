@@ -11,7 +11,7 @@ from typing import Dict, Tuple, List, Optional, Any
 from scripts.config_loader import load_config
 from scripts.logger import configure_logger
 from scripts.loader import load_dataframes
-from scripts.pipeline import preprocess_pipeline, metrics_pipeline, full_enrichment_pipeline, finalize_training_dataset
+from scripts.pipeline import preprocess_pipeline, metrics_pipeline, keywords_pipeline, finalize_training_dataset
 from scripts.keywords import load_keywords
 from scripts.enrichment import enrich_with_keyword_metrics
 from scripts.loader import (validate_data_sources, validate_folder_path)
@@ -135,10 +135,10 @@ def metrics(config_path: str, output_path: str, summary_path: str):
         "total_columns": int(metrics_df.shape[1])
     }
 
-    # 8. Build summary statistics
+    # 7. Build summary statistics
     summary = build_summary(metrics_stats=metrics_metadata)
 
-    # 9. Export summary to JSON
+    # 8. Export summary to JSON
     if summary_path is None:
         summary_path = output_path / "metrics_summary.json"
     else:
@@ -152,31 +152,55 @@ def metrics(config_path: str, output_path: str, summary_path: str):
     return metrics_df, metrics_metadata
 
 
-def enrich(config_path: str, output_path: str, remove_stopwords: bool = False):
+def keywords(config_path: str, output_path: str, summary_path: str, remove_stopwords: bool = False):
+    # 1. Load configuration and set up logger
     config = load_config(config_path)
     logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
 
-    validate_folder_path(config_path, logger)
-    validate_data_sources(config_path, logger)
+    # 2. Resolve output directory
+    if output_path is None:
+        output_path = Path(config.get("keywords_dir", "results/keywords")).resolve()
+    else:
+        output_path = Path(output_path).resolve()
+    output_path.mkdir(parents=True, exist_ok=True)
 
-    # Load preprocessed DataFrames as dictionary
-    logger.info(" Loading preprocessed DataFrames...")
+    # 3. Load metrics DataFrames =
+    logger.info(" Loading metrics DataFrame...")
+    input_dir = Path(config.get("metrics_dir", "results/study_metrics")).resolve()
+    metrics_path = input_dir / "metrics.csv"
+    metrics_df = pd.read_csv(metrics_path, low_memory=False)
+    logger.info(f" Loaded metrics DataFrame: {metrics_df.shape[0]:,} rows × {metrics_df.shape[1]:,} columns")
+    
+    # 4. Run keywords pipeline
+    keywords_df, keywords_summary, enrichment_summary = keywords_pipeline(metrics_df, logger=logger, remove_stopwords=remove_stopwords)
 
-    preprocess_dict = {
-        p.stem: pd.read_pickle(p)
-        for p in Path(config.get("preprocessed_dir", "results/preprocessed")).resolve().glob("*.pkl")
+    # 5. Export keywords DataFrame to CSV
+    keywords_path = output_path / "keywords.csv"
+    keywords_df.to_csv(keywords_path, index=False)
+    logger.info(f" Keyword-enriched DataFrame saved to: {keywords_path}")
+
+    # 6.  Prepare metadata for build_summary()
+    keywords_metadata = { "keywords_summary": keywords_summary,
+        "enrichment_summary": enrichment_summary,
+        "total_rows": int(keywords_df.shape[0]),
+        "total_columns": int(keywords_df.shape[1])
     }
-    logger.info(f" Loaded {len(preprocess_dict)} DataFrames.")
+    # 7. Build summary statistics
+    summary = build_summary(keywords_stats=keywords_metadata)
+
+    # 8. Export summary to JSON
+    if summary_path is None:
+        summary_path = output_path / "keywords_summary.json"
+    else:
+        summary_path = Path(summary_path).resolve()
+
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+    logger.info(f" Keywords summary exported to: {summary_path}")
+
+    return keywords_df, keywords_metadata
 
 
-    enriched_df = full_enrichment_pipeline(
-        preprocess_dict,
-        logger=logger, 
-        remove_stopwords=remove_stopwords
-    )
-
-    enriched_df.to_csv(output_path, index=False)
-    logger.info(f" Keyword-enriched ML DataFrame saved to: {output_path}")
 
 def main():
     parser = argparse.ArgumentParser(description="NIH ExPORTER CLI")
@@ -194,11 +218,12 @@ def main():
     metrics_parser.add_argument("--output", help="Path to output directory for aggregated outcomes dataset")
     metrics_parser.add_argument("--summary-json", help="Optional path to export metrics summary as JSON", required=False)
 
-    # ✨ Enrichment step
-    enrich_parser = subparsers.add_parser("enrich", help="Run full ML enrichment pipeline")
-    enrich_parser.add_argument("--config", required=True, help="Path to config.yaml")
-    enrich_parser.add_argument("--output", required=True, help="Path to output CSV")
-    enrich_parser.add_argument("--stopwords", action="store_true", help="Remove English stopwords during keyword enrichment")
+    # ✨ Keyword enrichment step
+    keyword_parser = subparsers.add_parser("keywords", help="Run full ML enrichment pipeline")
+    keyword_parser.add_argument("--config", required=True, help="Path to config.yaml")
+    keyword_parser.add_argument("--output", help="Path to output CSV")
+    keyword_parser.add_argument("--summary-json", help="Optional path to export metrics summary as JSON", required=False)
+    keyword_parser.add_argument("--stopwords", action="store_true", help="Remove English stopwords during keyword enrichment")
 
     # 📦 Training step
     train_parser = subparsers.add_parser("train", help="Run full pipeline and export ML training + dropped CSVs")
@@ -219,8 +244,8 @@ def main():
     elif args.command == "metrics":
         metrics_df, metrics_metadata = metrics(config_path=args.config, output_path=args.output, summary_path=args.summary_json)
 
-    elif args.command == "enrich":
-        enrich(args.config, args.output, remove_stopwords=args.stopwords)
+    elif args.command == "keywords":
+        keywords_df, keywords_metadata = keywords(args.config, args.output, summary_path=args.summary_json, remove_stopwords=args.stopwords)
     
     elif args.command == "train":
         finalize_training_dataset(args.config)

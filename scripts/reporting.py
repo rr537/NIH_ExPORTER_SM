@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 def build_summary(
     preprocess_stats: Optional[Dict[str, Any]] = None,
     metrics_stats: Optional[Dict[str, Any]] = None,
-    enrich_stats: Optional[Dict[str, Any]] = None
+    keywords_stats: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Combine metadata from preprocessing and enrichment steps into a unified summary.
@@ -75,11 +75,37 @@ def build_summary(
         }
 
     # 🌿 Add enrichment stats if available
-    if enrich_stats:
+    if keywords_stats:
         summary["enrichment"] = {
-            "features_added": enrich_stats.get("features_added", []),
-            "rows_retained": enrich_stats.get("rows_retained", None),
-            "data_quality_flags": enrich_stats.get("quality_flags", {})
+            "keyword_library": {
+                "treatment_terms": keywords_stats["keywords_summary"]["keyword_counts"]["treatment_terms"],
+                "disease_terms": keywords_stats["keywords_summary"]["keyword_counts"]["disease_terms"],
+                "total_terms": (
+                    keywords_stats["keywords_summary"]["keyword_counts"]["treatment_terms"] +
+                    keywords_stats["keywords_summary"]["keyword_counts"]["disease_terms"]
+                )
+            },
+            "terms_used": keywords_stats["keywords_summary"]["keyword_lists"],
+            "enrichment_metrics": {
+                "total_rows_processed": keywords_stats["enrichment_summary"].get("total_rows_processed"),
+                "text_columns_used": keywords_stats["enrichment_summary"].get("text_columns_used"),
+                "keyword_pool_size": keywords_stats["enrichment_summary"].get("keyword_pool_size"),
+                "treatment_pool_size": keywords_stats["enrichment_summary"].get("treatment_pool_size"),
+                "disease_pool_size": keywords_stats["enrichment_summary"].get("disease_pool_size"),
+                "total_keyword_hits": keywords_stats["enrichment_summary"].get("total_keyword_hits"),
+                "avg_hits_per_row": keywords_stats["enrichment_summary"].get("avg_hits_per_row"),
+                "avg_unique_per_row": keywords_stats["enrichment_summary"].get("avg_unique_per_row"),
+                "rows_with_hits": keywords_stats["enrichment_summary"].get("rows_with_hits"),
+                "rows_with_hits_pct": keywords_stats["enrichment_summary"].get("rows_with_hits_pct"),
+                "rows_without_hits": keywords_stats["enrichment_summary"].get("rows_without_hits"),
+                "rows_without_hits_pct": keywords_stats["enrichment_summary"].get("rows_without_hits_pct"),
+                "rows_flagged": keywords_stats["enrichment_summary"].get("rows_flagged"),
+                "top_flagged_terms": keywords_stats["enrichment_summary"].get("top_flagged_terms", [])
+            },
+            "output_dimensions": {
+                "rows": keywords_stats.get("total_rows"),
+                "columns": keywords_stats.get("total_columns")
+            }
         }
 
     return summary

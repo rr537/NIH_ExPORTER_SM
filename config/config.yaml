@@ -118,3 +118,4 @@ workers: 11
 output_dir: results
 preprocessed_dir: results/preprocessed
 metrics_dir: results/study_metrics
+keywords_dir: results/keywords

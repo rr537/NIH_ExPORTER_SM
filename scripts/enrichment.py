@@ -3,6 +3,8 @@ import logging
 from typing import List, Tuple, Dict, Optional
 from flashtext import KeywordProcessor
 from concurrent.futures import ThreadPoolExecutor
+import numpy as np
+from collections import Counter
 
 def enrich_with_keyword_metrics(
     df: pd.DataFrame,
@@ -59,6 +61,26 @@ def enrich_with_keyword_metrics(
     unique_flat = [count for batch in results for count in batch[1]]
     flagged_flat = [kw_list for batch in results for kw_list in batch[2]]
 
+    # 📊 Create enrichment summary
+    enrichment_summary = {
+    "total_rows_processed": len(df),
+    "text_columns_used": available_cols,
+    "max_workers": max_workers,
+    "chunk_size": chunk_size,
+    "keyword_pool_size" : len(set(treatments + diseases)),
+    "treatment_pool_size": len(set(treatments)),
+    "disease_pool_size": len(set(diseases)),
+    "total_keyword_hits": sum(total_flat),
+    "avg_hits_per_row": round(np.mean(total_flat), 2),
+    "avg_unique_per_row": round(np.mean(unique_flat), 2),
+    "rows_with_hits": sum(1 for c in total_flat if c > 0),
+    "rows_with_hits_pct" : round(sum(1 for c in total_flat if c > 0) / len(df) * 100, 2),
+    "rows_without_hits" : sum(1 for count in total_flat if count == 0),
+    "rows_without_hits_pct" : round(sum(1 for count in total_flat if count == 0) / len(df) * 100, 2),
+    "rows_flagged": sum(1 for flagged in flagged_flat if flagged),
+    "top_flagged_terms": Counter([kw for row in flagged_flat for kw in row]).most_common(10)
+}
+    
     # 🧼 Assign new columns
     df["total count"] = pd.Series(total_flat, index=df.index)
     df["total unique count"] = pd.Series(unique_flat, index=df.index)
@@ -67,4 +89,4 @@ def enrich_with_keyword_metrics(
     df.drop(columns="combined_text", inplace=True)
     logger.info(f" Keyword enrichment done: {df.shape[0]:,} rows tagged.")
 
-    return df
+    return df, enrichment_summary

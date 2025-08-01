@@ -73,13 +73,23 @@ def prepare_keywords(
     Loads and enriches keywords for treatment and disease tagging.
     Returns two lists of keyword variants.
     """
-    from scripts.keywords import load_keywords
-
+    
     treatments, diseases = load_keywords(config, logger, remove_stopwords=remove_stopwords)
+
+    keywords_summary = {
+    "keyword_counts": {
+        "treatment_terms": len(treatments),
+        "disease_terms": len(diseases)
+    },
+    "keyword_lists": {
+        "treatment_terms": sorted(treatments),
+        "disease_terms": sorted(diseases)
+    }
+}
 
     if not treatments and not diseases:
         logger.warning(" No enriched keywords returned — check config or enrichment logic.")
     else:
         logger.info(f" Keyword prep complete: {len(treatments)} treatment terms, {len(diseases)} disease terms.")
 
-    return treatments, diseases
+    return treatments, diseases, keywords_summary
