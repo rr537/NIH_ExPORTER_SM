@@ -116,6 +116,5 @@ workers: 11
 
 # 📂 Output settings
 output_dir: results
-paths:
-  
-  dedup_summary_csv_path: results/dedup_summary.csv
+preprocessed_dir: results/preprocessed
+metrics_dir: results/study_metrics

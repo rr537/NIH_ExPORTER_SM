@@ -29,37 +29,24 @@ dedup_summary_path = config.get("paths", {}).get("dedup_summary_csv_path", "resu
 
 
 # Preprocess pipeline to constructed appended source data, exported as seperate pickle files 
-
 def preprocess_pipeline(config: dict, logger: logging.Logger) -> Dict[str, pd.DataFrame] :    
     raw_dict, load_summary = load_dataframes(config_path, logger)
-    rename_dict, rename_log = rename_dataframe_columns(config, raw_dict, logger)
-    appended_dict = append_dataframes_by_folder(config, rename_dict, logger)
+    rename_dict, rename_summary = rename_dataframe_columns(config, raw_dict, logger)
+    appended_dict, appended_summary = append_dataframes_by_folder(config, rename_dict, logger)
 
-    return appended_dict, rename_log, load_summary
+    return appended_dict, rename_summary, load_summary, appended_summary
 
 # Pipeline to construct a single ML Dataframe with study outcome metrics (publication, patent, clinical study counts)
-def full_ml_pipeline(config: dict, logger: Optional[logging.Logger] = None) -> pd.DataFrame:
+def metrics_pipeline(appended_dict: dict, logger: Optional[logging.Logger] = None) -> pd.DataFrame:
 
-    raw_dict = load_dataframes(config_path, logger)
-    rename_dict, rename_log = rename_dataframe_columns(config, raw_dict, logger)
-    appended_dict = append_dataframes_by_folder(config, rename_dict, logger)
+    linked_dict, linked_summary_dict = merge_linked_dataframes(appended_dict, logger)
+    aggregate_df, aggregate_outcomes_summary_dict = aggregate_project_outputs(linked_dict, appended_dict, logger)
+    dedup_df , dedupe_summary_dict = remove_true_duplicates_from_df(aggregate_df, logger)
 
-    linked_dict = merge_linked_dataframes(appended_dict, logger)
-    aggregate_df, outcomes_dedup_summary = aggregate_project_outputs(linked_dict, appended_dict, logger)
-    dedup_df , df_dedup_summary = remove_true_duplicates_from_df(aggregate_df, logger)
-
-    dedup_summary = pd.concat([outcomes_dedup_summary, df_dedup_summary], ignore_index=True)
-    dedup_summary.to_csv(dedup_summary_path, index=False)
- 
-    if dedup_df.empty:
-        logger.warning(" ML DataFrame construction failed — received empty output.")
-    else:
-        logger.info(f" ML DataFrame ready: {dedup_df.shape[0]:,} rows × {dedup_df.shape[1]:,} columns")
-
-    return dedup_df
+    return dedup_df, linked_summary_dict, aggregate_outcomes_summary_dict, dedupe_summary_dict
 
 # Pipeline to construct a single ML Dataframe with study outcome metrics + enrich with additional keyword information. Includes keyword counts and flagging
-def full_enrichment_pipeline(config: dict, logger: logging.Logger, remove_stopwords: bool = False) -> pd.DataFrame:
+def full_enrichment_pipeline(combined_df, logger: logging.Logger, remove_stopwords: bool = False) -> pd.DataFrame:
 
     dedup_df = full_ml_pipeline(config, logger)
 
