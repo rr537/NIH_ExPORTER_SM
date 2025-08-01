@@ -11,7 +11,7 @@ from typing import Dict, Tuple, List, Optional, Any
 from scripts.config_loader import load_config
 from scripts.logger import configure_logger
 from scripts.loader import load_dataframes
-from scripts.pipeline import preprocess_pipeline, metrics_pipeline, keywords_pipeline, finalize_training_dataset
+from scripts.pipeline import preprocess_pipeline, metrics_pipeline, keywords_pipeline, finalize_pipeline
 from scripts.keywords import load_keywords
 from scripts.enrichment import enrich_with_keyword_metrics
 from scripts.loader import (validate_data_sources, validate_folder_path)
@@ -164,7 +164,7 @@ def keywords(config_path: str, output_path: str, summary_path: str, remove_stopw
         output_path = Path(output_path).resolve()
     output_path.mkdir(parents=True, exist_ok=True)
 
-    # 3. Load metrics DataFrames =
+    # 3. Load metrics DataFrames 
     logger.info(" Loading metrics DataFrame...")
     input_dir = Path(config.get("metrics_dir", "results/study_metrics")).resolve()
     metrics_path = input_dir / "metrics.csv"
@@ -200,7 +200,59 @@ def keywords(config_path: str, output_path: str, summary_path: str, remove_stopw
 
     return keywords_df, keywords_metadata
 
+def finalize (config_path: str, output_path: str, summary_path: str, drop_rows: bool = False):
+    # 1. Load configuration and set up logger
+    config = load_config(config_path)
+    logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
 
+    # 2. Resolve output directory
+    if output_path is None:
+        output_path = Path(config.get("finalize_dir", "results/finalize")).resolve()
+    else:
+        output_path = Path(output_path).resolve()
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # 3. Load keywords DataFrames 
+    logger.info(" Loading keywords-enriched DataFrame...")
+    input_dir = Path(config.get("keywords_dir", "results/keywords")).resolve()
+    keywords_path = input_dir / "keywords.csv"
+    keywords_df = pd.read_csv(keywords_path, low_memory=False)
+    logger.info(f" Loaded keywords DataFrame: {keywords_df.shape[0]:,} rows × {keywords_df.shape[1]:,} columns")
+
+    # 4. Run finalize pipeline
+    MLdf, MLdf_dropped, finalize_summary = finalize_pipeline(keywords_df, config=config, logger=logger, drop_rows=drop_rows)
+
+    # 5. Export finalized data to CSV
+    finalize_path = output_path / "finalized.csv"
+    MLdf.to_csv(finalize_path, index=False)
+    logger.info(f" Finalized DataFrame saved to: {finalize_path}")
+
+    if drop_rows:
+        dropped_path = output_path / "dropped_rows.csv"
+        MLdf_dropped.to_csv(dropped_path, index=False)
+        logger.info(f" Dropped rows saved to: {dropped_path}")
+    
+    # 6. Prepare metadata for build_summary()
+    finalize_metadata = {
+        "finalize_summary": finalize_summary,
+        "total_rows": int(MLdf.shape[0]),
+        "total_columns": int(MLdf.shape[1]),
+        "dropped_rows": int(MLdf_dropped.shape[0]) if drop_rows else 0
+    }
+    # 7. Build summary statistics
+    summary = build_summary(finalize_stats=finalize_metadata)
+
+    # 8. Export summary to JSON
+    if summary_path is None:
+        summary_path = output_path / "finalize_summary.json"
+    else:
+        summary_path = Path(summary_path).resolve()
+
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+    logger.info(f" Finalized dataset summary exported to: {summary_path}")
+
+    return MLdf, finalize_metadata
 
 def main():
     parser = argparse.ArgumentParser(description="NIH ExPORTER CLI")
@@ -219,21 +271,18 @@ def main():
     metrics_parser.add_argument("--summary-json", help="Optional path to export metrics summary as JSON", required=False)
 
     # ✨ Keyword enrichment step
-    keyword_parser = subparsers.add_parser("keywords", help="Run full ML enrichment pipeline")
+    keyword_parser = subparsers.add_parser("keywords", help="Count and flag keywords in project text related columns")
     keyword_parser.add_argument("--config", required=True, help="Path to config.yaml")
     keyword_parser.add_argument("--output", help="Path to output CSV")
-    keyword_parser.add_argument("--summary-json", help="Optional path to export metrics summary as JSON", required=False)
+    keyword_parser.add_argument("--summary-json", help="Optional path to export keyword summary as JSON", required=False)
     keyword_parser.add_argument("--stopwords", action="store_true", help="Remove English stopwords during keyword enrichment")
 
-    # 📦 Training step
-    train_parser = subparsers.add_parser("train", help="Run full pipeline and export ML training + dropped CSVs")
-    train_parser.add_argument("--config", required=True, help="Path to config.yaml")
-    train_parser.add_argument("--stopwords", action="store_true", help="Remove stopwords during keyword enrichment")
-
-    # 🧪 New: Export appended_dict for validation
-    export_parser = subparsers.add_parser("export_dict", help="Run pipeline up to appended_dict and export as pickles")
-    export_parser.add_argument("--config", required=True, help="Path to config.yaml")
-    export_parser.add_argument("--export_dir", required=True, help="Directory to export pickled DataFrames")
+    # 📦 Finalize training dataset step
+    finalize_parser = subparsers.add_parser("finalize", help="Filter out unnecessary columns and prepare final training dataset")
+    finalize_parser.add_argument("--config", required=True, help="Path to config.yaml")
+    finalize_parser.add_argument("--output", help="Path to output CSV")
+    finalize_parser.add_argument("--summary-json", help="Optional path to export training dataset summary as JSON", required=False)
+    finalize_parser.add_argument("--drop-output", action="store_true", help="Export dropped rows")
 
     args = parser.parse_args()
     print(f" Parsed command: {args.command}")
@@ -247,34 +296,8 @@ def main():
     elif args.command == "keywords":
         keywords_df, keywords_metadata = keywords(args.config, args.output, summary_path=args.summary_json, remove_stopwords=args.stopwords)
     
-    elif args.command == "train":
-        finalize_training_dataset(args.config)
-
-    elif args.command == "export_dict":
-        print(" Entering export_dict block")
-        from scripts.config_loader import load_config
-        from scripts.logger import configure_logger
-        from scripts.loader import load_dataframes
-        from scripts.preprocessing import rename_dataframe_columns
-        from scripts.merge import append_dataframes_by_folder
-
-        import os
-        import pandas as pd
-
-        config = load_config(args.config)
-        logger = configure_logger(config=config)
-
-        raw_dict = load_dataframes(args.config, logger)
-        rename_dict = rename_dataframe_columns(config, raw_dict, logger)
-        appended_dict = append_dataframes_by_folder(config, rename_dict, logger)
-
-        os.makedirs(args.export_dir, exist_ok=True)
-
-        print(" Exporting the following keys:", list(appended_dict.keys()))  # Sanity print
-        for name, df in appended_dict.items():
-            path = os.path.join(args.export_dir, f"{name}.pkl")
-            df.to_pickle(path)
-            print(f" Saved {name}.pkl to {path}")
+    elif args.command == "finalize":
+        MLdf, finalize_metadata = finalize(args.config, args.output, summary_path=args.summary_json, drop_rows = args.drop_output)
 
 if __name__ == "__main__":
     main()

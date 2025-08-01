@@ -34,10 +34,23 @@ def create_ml_training_df(
         MLdf = df_retained[columns_to_extract]
         MLdf_dropped = df_dropped[columns_to_extract]
 
+        finalize_summary = {
+            "ml_columns_used": columns_to_extract,  # Should be list[str]
+            "total_input_rows": int(df.shape[0]),
+            "total_retained_rows": int(df_retained.shape[0]),
+            "total_dropped_rows": int(df_dropped.shape[0]),
+            "percent_retained": round((df_retained.shape[0] / df.shape[0]) * 100, 2) if df.shape[0] > 0 else None,
+            "percent_dropped": round((df_dropped.shape[0] / df.shape[0]) * 100, 2) if df.shape[0] > 0 else None,
+            "summary_type": "ML Training Filter",
+            "retained_index_range": [int(df_retained.index.min()), int(df_retained.index.max())] if not df_retained.empty else None,
+            "dropped_index_range": [int(df_dropped.index.min()), int(df_dropped.index.max())] if not df_dropped.empty else None
+        }
+
+
         logger.info(f" Retained {MLdf.shape[0]} training rows, dropped {MLdf_dropped.shape[0]}")
         logger.info(f" Columns used for ML: {columns_to_extract}")
 
-        return MLdf, MLdf_dropped
+        return MLdf, MLdf_dropped, finalize_summary
 
     except KeyError as e:
         logger.error(" Column(s) missing from DataFrame during ML filtering", exc_info=True)
@@ -45,22 +58,3 @@ def create_ml_training_df(
     except Exception as e:
         logger.error(" Unexpected error in ML training filter", exc_info=True)
         raise
-
-def export_training_dataframe(
-    df: pd.DataFrame,
-    config: dict,
-    logger: logging.Logger,
-    filename: str
-) -> None:
-    """
-    Exports ML training DataFrame to output directory defined in config.
-    """
-    output_dir = Path(config.get("output_dir", "results")).resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    logger.info(f" Export path: {output_dir}")
-
-    out_path = output_dir / filename
-    df.to_csv(out_path, index=False)
-
-    logger.info(f" {filename} saved to: {out_path}")

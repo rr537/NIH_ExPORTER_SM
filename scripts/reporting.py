@@ -3,7 +3,8 @@ from typing import Optional, Dict, Any
 def build_summary(
     preprocess_stats: Optional[Dict[str, Any]] = None,
     metrics_stats: Optional[Dict[str, Any]] = None,
-    keywords_stats: Optional[Dict[str, Any]] = None
+    keywords_stats: Optional[Dict[str, Any]] = None,
+    finalize_stats: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Combine metadata from preprocessing and enrichment steps into a unified summary.
@@ -11,7 +12,7 @@ def build_summary(
     """
     summary = {}
 
-    # 🧪 Add preprocessing stats if available
+    # 🧪 Add preprocessing stats 
     if preprocess_stats:
         folder_stats = preprocess_stats.get("load_summary", [])
 
@@ -43,7 +44,7 @@ def build_summary(
             "total_columns": preprocess_stats.get("total_columns")
         }
 
-    # 🌿 Add metrics stats if available
+    # 🌿 Add metrics stats 
     if metrics_stats:
         summary["linked by shared identifier"] = {
             "by_'APPLICATION_ID'": {
@@ -74,7 +75,7 @@ def build_summary(
             }
         }
 
-    # 🌿 Add enrichment stats if available
+    # 🌿 Add keyword enrichment stats 
     if keywords_stats:
         summary["enrichment"] = {
             "keyword_library": {
@@ -105,6 +106,26 @@ def build_summary(
             "output_dimensions": {
                 "rows": keywords_stats.get("total_rows"),
                 "columns": keywords_stats.get("total_columns")
+            }
+        }
+    # 🌿 Add finalize dataset stats
+    if finalize_stats:
+        summary["ml_training"] = {
+            "filter_summary": {
+                "ml_columns_used": finalize_stats["finalize_summary"].get("ml_columns_used", []),
+                "total_input_rows": finalize_stats["finalize_summary"].get("total_input_rows"),
+                "total_retained_rows": finalize_stats["finalize_summary"].get("total_retained_rows"),
+                "total_dropped_rows": finalize_stats["finalize_summary"].get("total_dropped_rows"),
+                "percent_retained": finalize_stats["finalize_summary"].get("percent_retained"),
+                "percent_dropped": finalize_stats["finalize_summary"].get("percent_dropped"),
+                "retained_index_range": finalize_stats["finalize_summary"].get("retained_index_range"),
+                "dropped_index_range": finalize_stats["finalize_summary"].get("dropped_index_range"),
+                "summary_type": finalize_stats["finalize_summary"].get("summary_type", "ML Training Filter")
+            },
+            "output_dimensions": {
+                "total_rows": finalize_stats.get("total_rows"),
+                "total_columns": finalize_stats.get("total_columns"),
+                "dropped_rows": finalize_stats.get("dropped_rows", 0)
             }
         }
 
