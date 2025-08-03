@@ -154,7 +154,7 @@ conda activate nih_env
 ### 🐍 Run Workflow 
 ```bash
 # Full pipeline (Note: finalize_training is a placeholder rule and may require adjustment.)
-snakemake --use-conda --cores 4 finalize_training
+snakemake --use-conda --cores 4 finalize
 
 # Manual CLI execution
 # Preprocessing step

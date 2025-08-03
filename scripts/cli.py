@@ -92,7 +92,7 @@ def preprocess(
 
     return preprocess_dict, preprocess_metadata
 
-def metrics(config_path: str, output_path: str, summary_path: str):
+def metrics(pickles: Optional[List[str]], config_path: str, output_path: str, summary_path: str):
     # 1. Load configuration and set up logger
     config = load_config(config_path)
     logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
@@ -106,8 +106,14 @@ def metrics(config_path: str, output_path: str, summary_path: str):
 
     # 3. Load preprocessed DataFrames
     logger.info(" Loading preprocessed DataFrames...")
-    input_dir = Path(config.get("preprocessed_dir", "results/preprocessed")).resolve()
-    pickle_paths = sorted(input_dir.glob("*.pkl"))
+
+    # Determine input pickle paths - either from provided list or from default directory
+    logger.info(" Determining input pickle paths...")
+    if pickles:
+        pickle_paths = [Path(p).resolve() for p in pickles]
+    else:
+        input_dir = Path(config.get("preprocessed_dir", "results/preprocessed")).resolve()
+        pickle_paths = sorted(input_dir.glob("*.pkl"))
 
     # Load all DataFrames from pickle files into a dict
     appended_dict = {
@@ -147,12 +153,12 @@ def metrics(config_path: str, output_path: str, summary_path: str):
 
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
-    logger.info(f" Preprocessing summary exported to: {summary_path}")
+    logger.info(f" Metrics summary exported to: {summary_path}")
 
     return metrics_df, metrics_metadata
 
 
-def keywords(config_path: str, output_path: str, summary_path: str, remove_stopwords: bool = False):
+def keywords(metrics: str, config_path: str, output_path: str, summary_path: str, remove_stopwords: bool = False):
     # 1. Load configuration and set up logger
     config = load_config(config_path)
     logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
@@ -166,8 +172,11 @@ def keywords(config_path: str, output_path: str, summary_path: str, remove_stopw
 
     # 3. Load metrics DataFrames 
     logger.info(" Loading metrics DataFrame...")
-    input_dir = Path(config.get("metrics_dir", "results/study_metrics")).resolve()
-    metrics_path = input_dir / "metrics.csv"
+    if metrics:
+        metrics_path = Path(metrics).resolve()
+    else:
+        input_dir = Path(config.get("metrics_dir", "results/study_metrics")).resolve()
+        metrics_path = input_dir / "metrics.csv"
     metrics_df = pd.read_csv(metrics_path, low_memory=False)
     logger.info(f" Loaded metrics DataFrame: {metrics_df.shape[0]:,} rows × {metrics_df.shape[1]:,} columns")
     
@@ -266,12 +275,14 @@ def main():
 
     # Metrics step
     metrics_parser = subparsers.add_parser("metrics", help="Aggregate project outcomes into a single dataset")
+    metrics_parser.add_argument("--pickles", nargs="+", default=None, help="Optional list of pickle file paths to process")
     metrics_parser.add_argument("--config", required=True, help="Path to config.yaml")
     metrics_parser.add_argument("--output", help="Path to output directory for aggregated outcomes dataset")
     metrics_parser.add_argument("--summary-json", help="Optional path to export metrics summary as JSON", required=False)
 
     # ✨ Keyword enrichment step
     keyword_parser = subparsers.add_parser("keywords", help="Count and flag keywords in project text related columns")
+    keyword_parser.add_argument("--metrics", help="Optional path to metrics CSV file")
     keyword_parser.add_argument("--config", required=True, help="Path to config.yaml")
     keyword_parser.add_argument("--output", help="Path to output CSV")
     keyword_parser.add_argument("--summary-json", help="Optional path to export keyword summary as JSON", required=False)
@@ -291,10 +302,10 @@ def main():
         preprocess_dict, preprocess_metadata = preprocess(config_path=args.config, output_path=args.output, summary_path=args.summary_json)
 
     elif args.command == "metrics":
-        metrics_df, metrics_metadata = metrics(config_path=args.config, output_path=args.output, summary_path=args.summary_json)
+        metrics_df, metrics_metadata = metrics(pickles = args.pickles, config_path=args.config, output_path=args.output, summary_path=args.summary_json)
 
     elif args.command == "keywords":
-        keywords_df, keywords_metadata = keywords(config_path=args.config, output_path=args.output, summary_path=args.summary_json, remove_stopwords=args.stopwords)
+        keywords_df, keywords_metadata = keywords(metrics = args.metrics, config_path=args.config, output_path=args.output, summary_path=args.summary_json, remove_stopwords=args.stopwords)
     
     elif args.command == "finalize":
         MLdf, finalize_metadata = finalize(config_path=args.config, output_path=args.output, summary_path=args.summary_json, drop_rows = args.drop_output)

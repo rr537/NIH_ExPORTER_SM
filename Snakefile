@@ -1,87 +1,118 @@
 from datetime import datetime
+from pathlib import Path
+
 date_string = datetime.today().strftime("%Y-%m-%d")
 
+# --- Derived paths based on config ---
 configfile: "config/config.yaml"
+
+# --- Define paths ---
+CONFIG_PATH = "config/config.yaml"
 
 rule preprocess:
     input:
-        "config/config.yaml"
+        config = CONFIG_PATH
     output:
-        pkl_dir=directory("results/preprocessed/"),
-        summary="results/preprocess_summary.json"
+        preprocessed_dir = directory(config['preprocessed_dir'])
+    params:
+        summary = str(Path(config['preprocessed_dir']) / "preprocess_summary.json")
     log:
         f"logs/preprocess_{date_string}.log"
     conda:
         "envs/nih.yml"
     shell:
         """
-        python scripts/cli.py preprocess --config {input.config} --output {output.pkl_dir} --summary-json {output.summary} > {log} 2>&1
+        python scripts/cli.py preprocess \
+            --config {input.config} \
+            --output {output.preprocessed_dir} \
+            --summary-json {params.summary} \
+            > {log} 2>&1
         """
 
-rule enrich_keywords:
+# Preprocess
+PREPROCESSED_DIR = Path(config["preprocessed_dir"])
+PICKLE_FILES = list(PREPROCESSED_DIR.glob("*.pkl"))
+if not PICKLE_FILES:
+    raise FileNotFoundError("No pickle files found in preprocessed directory.")
+
+rule metrics:
     input:
-        cleaned="results/cleaned.csv",
-        config="config/config.yaml"
+        config = CONFIG_PATH,
+        pickles = PICKLE_FILES
     output:
-        enriched="results/enriched.csv"
+        metrics_dir = directory(config['metrics_dir']),
+        summary = lambda wildcards, output: f"{output.metrics_dir}/metrics_summary.json"
     log:
-        f"logs/enrich_keywords_{date_string}.log"
+        f"logs/metrics_{date_string}.log"
     conda:
         "envs/nih.yml"
     shell:
         """
-        python scripts/cli.py enrich --config {input.config} --output {output} --log-file {log} > {log} 2>&1
+        python scripts/cli.py metrics --pickles {input.pickles} --config {input.config} --output {output.metrics_dir} --summary-json {output.summary} > {log} 2>&1
         """
 
-rule finalize_training:
+# Metrics
+METRICS_DIR = Path(config["metrics_dir"])
+METRICS_FILE = sorted(METRICS_DIR.glob("*.csv"))
+if not METRICS_FILE:
+    raise FileNotFoundError("No metrics CSV file found in directory.")
+METRICS_FILE = METRICS_FILE[0] # take the most recent metrics file
+
+rule keywords:
     input:
-        enriched="results/enriched.csv",
-        config="config/config.yaml"
+        config = CONFIG_PATH,
+        metrics = METRICS_FILE
     output:
-        training="results/MLdf_training.csv",
-        dropped="results/MLdf_dropped.csv",
-        summary="results/summary.json"
+        keywords_dir = directory(config['keywords_dir']),
+        summary = lambda wildcards, output: f"{output.keywords_dir}/keywords_summary.json"
     log:
-         f"logs/finalize_training_{date_string}.log"
-    conda:
-        "envs/nih.yml"
-    shell:
-        """
-        python scripts/cli.py train --config {input.config} --stopwords --log-file {log} > {log} 2>&1
-        """
-
-rule export_appended_dict:
-    input:
-        script="scripts/cli.py",
-        config="config/config.yaml"
-    output:
-        expand("validation_output/appended_dict/{name}.pkl", name=[
-            "ClinicalStudies", "Patents", "PRJ", "PRJABS", "PUB", "PUBLINK"
-        ])
+        f"logs/keywords_{date_string}{'_stopwords' if config.get('use_stopwords', False) else ''}.log"
     params:
-        export_dir="validation_output/appended_dict"
+        stopwords_flag = "--stopwords" if config.get("use_stopwords", False) else ""
+    conda:
+        "envs/nih.yml"
     shell:
         """
-        python {input.script} export_dict \
-        --config {input.config} \
-        --export_dir {params.export_dir}
+        python scripts/cli.py keywords \
+            --metrics {input.metrics} \
+            --config {input.config} \
+            --output {output.keywords_dir} \
+            --summary-json {output.summary} \
+            --log-file {log} \
+            {params.stopwords_flag} \
+            > {log} 2>&1
         """
 
-rule summarize_pipeline:
+# Keywords
+KEYWORDS_DIR = Path(config["keywords_dir"])
+KEYWORDS_FILE = sorted(KEYWORDS_DIR.glob("*.csv"))
+if not KEYWORDS_FILE:
+    raise FileNotFoundError("No keywords CSV file found in directory.")
+KEYWORDS_FILE = KEYWORDS_FILE[0] # take the most recent metrics file
+
+
+rule finalize:
     input:
-        preprocess_log="results/preprocess_metadata.json",
-        enrich_log="results/enrich_metadata.json"
+        config = CONFIG_PATH,
+        keywords = KEYWORDS_FILE
     output:
-        summary_json="results/pipeline_summary.json"
-    run:
-        import json
-        from build_summary import build_summary
-
-        with open(input.preprocess_log) as f1:
-            pre_stats = json.load(f1)
-        with open(input.enrich_log) as f2:
-            enrich_stats = json.load(f2)
-
-        summary = build_summary(pre_stats, enrich_stats)
-        with open(output.summary_json, "w") as fout:
-            json.dump(summary, fout, indent=2)
+        finalize_dir = directory(config['finalize_dir']),
+        summary = lambda wildcards, output: f"{output.finalize_dir}/finalize_summary.json",
+        dropped = lambda wildcards, output: f"{output.finalize_dir}/dropped_rows.csv" if config.get("finalize_drop_output", False) else None
+    log:
+         f"logs/finalize_{date_string}.log"
+    params:
+        drop_flag = "--drop-output" if config.get("finalize_drop_output", False) else ""
+    conda:
+        "envs/nih.yml"
+    shell:
+        """
+        python scripts/cli.py finalize \
+            --keywords {input.keywords} \
+            --config {input.config} \
+            --output {output.finalize_dir} \
+            --summary-json {output.summary} \
+            --log-file {log} \
+            {params.drop_flag} \
+            > {log} 2>&1
+        """

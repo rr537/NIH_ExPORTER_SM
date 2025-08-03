@@ -107,6 +107,8 @@ ml_columns:
 force_append: true 
 parallel: true
 remove_duplicates: true
+finalize_drop_output: true
+use_stopwords: true
 
 # 🧪 Execution settings
 loglevel: DEBUG
