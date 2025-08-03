@@ -294,10 +294,10 @@ def main():
         metrics_df, metrics_metadata = metrics(config_path=args.config, output_path=args.output, summary_path=args.summary_json)
 
     elif args.command == "keywords":
-        keywords_df, keywords_metadata = keywords(args.config, args.output, summary_path=args.summary_json, remove_stopwords=args.stopwords)
+        keywords_df, keywords_metadata = keywords(config_path=args.config, output_path=args.output, summary_path=args.summary_json, remove_stopwords=args.stopwords)
     
     elif args.command == "finalize":
-        MLdf, finalize_metadata = finalize(args.config, args.output, summary_path=args.summary_json, drop_rows = args.drop_output)
+        MLdf, finalize_metadata = finalize(config_path=args.config, output_path=args.output, summary_path=args.summary_json, drop_rows = args.drop_output)
 
 if __name__ == "__main__":
     main()
