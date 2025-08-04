@@ -113,6 +113,7 @@ def build_summary(
         summary["ml_training"] = {
             "filter_summary": {
                 "ml_columns_used": finalize_stats["finalize_summary"].get("ml_columns_used", []),
+                "cutoff_value": finalize_stats["finalize_summary"].get("cutoff_value"),
                 "total_input_rows": finalize_stats["finalize_summary"].get("total_input_rows"),
                 "total_retained_rows": finalize_stats["finalize_summary"].get("total_retained_rows"),
                 "total_dropped_rows": finalize_stats["finalize_summary"].get("total_dropped_rows"),

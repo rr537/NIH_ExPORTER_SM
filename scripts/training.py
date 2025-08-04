@@ -6,7 +6,8 @@ import logging
 def create_ml_training_df(
     df: pd.DataFrame,
     config: Dict,
-    logger: logging.Logger
+    logger: logging.Logger,
+    cutoff_value: int
 ) -> Tuple[pd.DataFrame, pd.DataFrame, Dict]:
     """
     Filters DataFrame into ML-ready subset using 'ml_columns' and 'total unique count'.
@@ -47,10 +48,14 @@ def create_ml_training_df(
         logger.error(f"Missing ML columns: {missing_cols}")
         return pd.DataFrame(), pd.DataFrame(), {}
 
-    # Filter and split the dataframe based on the required column value
+    # Filter and split the dataframe based on cut off value 
     try:
-        df_retained = df[df[required_col] > 0]
-        df_dropped = df[df[required_col] == 0]
+        if cutoff_value is None:
+            cutoff_value = config.get("cutoff_value", 0)
+        else:
+            cutoff_value = int(cutoff_value)
+        df_retained = df[df[required_col] >= cutoff_value]
+        df_dropped = df[df[required_col] < cutoff_value]
 
         MLdf = df_retained[columns_to_extract]
         MLdf_dropped = df_dropped[columns_to_extract]
@@ -58,6 +63,7 @@ def create_ml_training_df(
     # Create a summary dictionary with metadata about the filtering process
         finalize_summary = {
             "ml_columns_used": columns_to_extract,
+            "cutoff_value": int(cutoff_value),
             "total_input_rows": int(df.shape[0]),
             "total_retained_rows": int(df_retained.shape[0]),
             "total_dropped_rows": int(df_dropped.shape[0]),

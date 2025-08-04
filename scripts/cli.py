@@ -209,7 +209,7 @@ def keywords(metrics: str, config_path: str, output_path: str, summary_path: str
 
     return keywords_df, keywords_metadata
 
-def finalize (keywords: str, config_path: str, output_path: str, summary_path: str, drop_rows: bool = False):
+def finalize (keywords: str, config_path: str, output_path: str, summary_path: str, cutoff_value: int, drop_rows: bool = False):
     # 1. Load configuration and set up logger
     config = load_config(config_path)
     logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
@@ -232,7 +232,7 @@ def finalize (keywords: str, config_path: str, output_path: str, summary_path: s
     logger.info(f" Loaded keywords DataFrame: {keywords_df.shape[0]:,} rows × {keywords_df.shape[1]:,} columns")
 
     # 4. Run finalize pipeline
-    MLdf, MLdf_dropped, finalize_summary = finalize_pipeline(keywords_df, config=config, logger=logger, drop_rows=drop_rows)
+    MLdf, MLdf_dropped, finalize_summary = finalize_pipeline(keywords_df, config=config, logger=logger, cutoff_value=cutoff_value)
 
     # 5. Export finalized data to CSV
     finalize_path = output_path / "finalized.csv"
@@ -297,6 +297,7 @@ def main():
     finalize_parser.add_argument("--config", required=True, help="Path to config.yaml")
     finalize_parser.add_argument("--output", help="Path to output CSV")
     finalize_parser.add_argument("--summary-json", help="Optional path to export training dataset summary as JSON", required=False)
+    finalize_parser.add_argument("--cutoff_value", type=int, help="Cut off value for filtering rows based on keyword counts")
     finalize_parser.add_argument("--drop-output", action="store_true", help="Export dropped rows")
 
     args = parser.parse_args()
@@ -312,7 +313,7 @@ def main():
         keywords_df, keywords_metadata = keywords(metrics = args.metrics, config_path=args.config, output_path=args.output, summary_path=args.summary_json, remove_stopwords=args.stopwords)
     
     elif args.command == "finalize":
-        MLdf, finalize_metadata = finalize(keywords = args.keywords, config_path=args.config, output_path=args.output, summary_path=args.summary_json, drop_rows = args.drop_output)
+        MLdf, finalize_metadata = finalize(keywords = args.keywords, config_path=args.config, output_path=args.output, summary_path=args.summary_json, cutoff_value = args.cutoff_value, drop_rows = args.drop_output)
 
 if __name__ == "__main__":
     main()

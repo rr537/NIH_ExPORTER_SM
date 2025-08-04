@@ -54,8 +54,8 @@ def keywords_pipeline(metrics_df, logger: logging.Logger, remove_stopwords: bool
     return keywords_df, keywords_summary, enrichment_summary
 
 # Full pipeline to finalize the training dataset, includes study outcome metrics + keyword enrichment + finalization steps (dropping unnecessary columns, removing zero-count rows, and exporting the final DataFrames
-def finalize_pipeline(keywords_df, config: dict, logger: logging.Logger, drop_rows: bool = False) -> pd.DataFrame:
+def finalize_pipeline(keywords_df, config: dict, logger: logging.Logger, cutoff_value: int = 0) -> pd.DataFrame:
     
-    MLdf, MLdf_dropped, finalize_summary = create_ml_training_df(keywords_df, config, logger)
+    MLdf, MLdf_dropped, finalize_summary = create_ml_training_df(keywords_df, config, logger, cutoff_value)
 
     return MLdf, MLdf_dropped, finalize_summary

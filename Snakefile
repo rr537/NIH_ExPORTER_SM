@@ -79,7 +79,8 @@ rule finalize:
     log:
          f"logs/finalize_{date_string}.log"
     params:
-        drop_flag = "--drop-output" if config.get("finalize_drop_output", False) else ""
+        drop_flag = "--drop-output" if config.get("finalize_drop_output", False) else "",
+        cutoff: config["cutoff_value"]
     conda:
         "envs/nih.yml"
     shell:
@@ -89,6 +90,7 @@ rule finalize:
             --config {input.config} \
             --output {output.finalize_dir} \
             --summary-json {output.summary} \
+            --cutoff_value {params.cutoff} \
             {params.drop_flag} \
             > {log} 2>&1
         """
