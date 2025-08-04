@@ -123,7 +123,7 @@ workers: 11
 
 # 📂 Output settings
 output_dir: results
-preprocessed_dir: results/preprocessed
+preprocess_dir: results/preprocessed
 metrics_dir: results/study_metrics
 keywords_dir: results/keywords
 finalize_dir: results/finalize

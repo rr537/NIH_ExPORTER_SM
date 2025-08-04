@@ -1,4 +1,5 @@
 import sys
+import os
 from pathlib import Path
 import json
 # Add project root to Python path
@@ -9,7 +10,10 @@ import pandas as pd
 from typing import Dict, Tuple, List, Optional, Any  
 from scripts.config_loader import load_config
 from scripts.logger import configure_logger
+from scripts.loader import load_dataframes
 from scripts.pipeline import preprocess_pipeline, metrics_pipeline, keywords_pipeline, finalize_pipeline
+from scripts.keywords import load_keywords
+from scripts.enrichment import enrich_with_keyword_metrics
 from scripts.loader import (validate_data_sources, validate_folder_path)
 from scripts.reporting import build_summary
 
@@ -269,7 +273,7 @@ def main():
     # 👷 Preprocessing step
     preprocess_parser = subparsers.add_parser("preprocess", help="Rename and append raw CSVs")
     preprocess_parser.add_argument("--config", required=True, help="Path to config.yaml")
-    preprocess_parser.add_argument("--output", help="Path to output directory for appended DataFrames as pickle files")
+    preprocess_parser.add_argument("--output", help="Path to output directory for pickled DataFrames")
     preprocess_parser.add_argument("--summary-json", help="Optional path to export preprocessing summary as JSON", required=False)
 
     # Metrics step

@@ -79,54 +79,7 @@ def load_csv_files(
 
     return dataframes
 
-# 🔍 Validation utility
-# Validates folder path and checks for suspicious segments
-def validate_folder_path(config_path: str, logger: logging.Logger) -> None:
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
 
-    folder_raw = config.get("folder", "")
-    folder_path = Path(folder_raw)
-
-    # Catch suspicious starting segments
-    suspicious = ["..", "...", ".", "/", "\\"]
-
-    if any(folder_raw.strip().startswith(s) for s in suspicious):
-        logger.warning(
-            f"⚠️ Suspicious folder path in config: '{folder_raw}' — "
-            "consider using a relative path like 'data/raw' from the project root."
-        )
-
-    # Absolute check
-    if folder_path.is_absolute():
-        logger.warning(
-            f"⚠️ Absolute folder path detected: '{folder_path}' — "
-            "pipeline works best with relative paths to ensure portability."
-        )
-# 📂 Validate data sources
-def validate_data_sources(config_path: str, logger: logging.Logger) -> None:
-    project_root = Path(__file__).resolve().parents[1]
-
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
-
-    data_root = project_root / config["folder"]
-    subfolders = config.get("subfolders", [])
-
-    logger.info(" Validating data sources...\n")
-
-    for subfolder in subfolders:
-        folder_path = data_root / subfolder
-        if not folder_path.exists():
-            logger.warning(f" Missing folder: {folder_path.resolve()}")
-            continue
-
-        csv_files = list(folder_path.glob("*.csv"))
-        count = len(csv_files)
-        if count == 0:
-            logger.warning(f" Folder exists but contains no CSVs: {folder_path.resolve()}")
-        else:
-            logger.info(f" Found {count:,} CSV file(s) in: {folder_path.resolve()}")
 
 # 🚪 Entry point for pipeline ingestion
 def load_dataframes(config_path: str, logger: logging.Logger) -> Dict[str, Dict[str, pd.DataFrame]]:
