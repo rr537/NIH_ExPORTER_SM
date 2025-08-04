@@ -118,15 +118,12 @@ def build_summary(
                 "total_retained_rows": finalize_stats["finalize_summary"].get("total_retained_rows"),
                 "total_dropped_rows": finalize_stats["finalize_summary"].get("total_dropped_rows"),
                 "percent_retained": finalize_stats["finalize_summary"].get("percent_retained"),
-                "percent_dropped": finalize_stats["finalize_summary"].get("percent_dropped"),
-                "retained_index_range": finalize_stats["finalize_summary"].get("retained_index_range"),
-                "dropped_index_range": finalize_stats["finalize_summary"].get("dropped_index_range"),
-                "summary_type": finalize_stats["finalize_summary"].get("summary_type", "ML Training Filter")
+                "percent_dropped": finalize_stats["finalize_summary"].get("percent_dropped")
             },
             "output_dimensions": {
                 "total_rows": finalize_stats.get("total_rows"),
                 "total_columns": finalize_stats.get("total_columns"),
-                "dropped_rows": finalize_stats.get("dropped_rows", 0)
+                "exported_dropped_rows": finalize_stats.get("exported_dropped_rows", 0)
             }
         }
 

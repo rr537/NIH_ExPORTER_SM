@@ -75,11 +75,11 @@ rule finalize:
     output:
         finalize_dir = directory(config['finalize_dir']),
         summary = str(Path(config['finalize_dir']) / "finalize_summary.json"),
-        dropped = str(Path(config['finalize_dir']) / "dropped_rows.csv") if config.get("finalize_drop_output", False) else None
+        dropped = str(Path(config['finalize_dir']) / "dropped_rows.csv") if config.get("export_drop_output", False) else None
     log:
          f"logs/finalize_{date_string}.log"
     params:
-        drop_flag = "--drop-output" if config.get("finalize_drop_output", False) else "",
+        drop_flag = "--drop-output" if config.get("export_drop_output", False) else "",
         cutoff: config["cutoff_value"]
     conda:
         "envs/nih.yml"

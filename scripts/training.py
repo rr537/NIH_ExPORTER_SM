@@ -54,6 +54,7 @@ def create_ml_training_df(
             cutoff_value = config.get("cutoff_value", 0)
         else:
             cutoff_value = int(cutoff_value)
+
         df_retained = df[df[required_col] >= cutoff_value]
         df_dropped = df[df[required_col] < cutoff_value]
 
@@ -69,7 +70,6 @@ def create_ml_training_df(
             "total_dropped_rows": int(df_dropped.shape[0]),
             "percent_retained": round((df_retained.shape[0] / df.shape[0]) * 100, 2) if df.shape[0] > 0 else None,
             "percent_dropped": round((df_dropped.shape[0] / df.shape[0]) * 100, 2) if df.shape[0] > 0 else None,
-            "summary_type": "ML Training Filter",
             "retained_index_range": [int(df_retained.index.min()), int(df_retained.index.max())] if not df_retained.empty else None,
             "dropped_index_range": [int(df_dropped.index.min()), int(df_dropped.index.max())] if not df_dropped.empty else None
         }

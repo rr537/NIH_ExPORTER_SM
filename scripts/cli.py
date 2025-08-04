@@ -249,7 +249,7 @@ def finalize (keywords: str, config_path: str, output_path: str, summary_path: s
         "finalize_summary": finalize_summary,
         "total_rows": int(MLdf.shape[0]),
         "total_columns": int(MLdf.shape[1]),
-        "dropped_rows": int(MLdf_dropped.shape[0]) if drop_rows else 0
+        "exported_dropped_rows": int(MLdf_dropped.shape[0]) if drop_rows else 0
     }
     # 7. Build summary statistics
     summary = build_summary(finalize_stats=finalize_metadata)
@@ -295,9 +295,9 @@ def main():
     finalize_parser = subparsers.add_parser("finalize", help="Filter out unnecessary columns and prepare final training dataset")
     finalize_parser.add_argument("--keywords", help="Optional path to keywords CSV file")
     finalize_parser.add_argument("--config", required=True, help="Path to config.yaml")
-    finalize_parser.add_argument("--output", help="Path to output CSV")
+    finalize_parser.add_argument("--output", help="Optional Path to output CSV")
     finalize_parser.add_argument("--summary-json", help="Optional path to export training dataset summary as JSON", required=False)
-    finalize_parser.add_argument("--cutoff_value", type=int, help="Cut off value for filtering rows based on keyword counts")
+    finalize_parser.add_argument("--cutoff_value", type=int, help="Cut off value for filtering rows based on keyword counts. Default = 1")
     finalize_parser.add_argument("--drop-output", action="store_true", help="Export dropped rows")
 
     args = parser.parse_args()

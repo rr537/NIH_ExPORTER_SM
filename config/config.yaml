@@ -107,8 +107,12 @@ ml_columns:
 force_append: true 
 parallel: true
 remove_duplicates: true
-finalize_drop_output: true
+
+# keywords
 use_stopwords: true
+
+# finalize
+export_drop_output: true
 cutoff_value: 1
 
 # 🧪 Execution settings
