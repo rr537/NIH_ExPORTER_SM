@@ -110,10 +110,10 @@ def metrics(pickles: Optional[List[str]], config_path: str, output_path: str, su
     # Determine input pickle paths - either from provided list or from default directory
     logger.info(" Determining input pickle paths...")
     if pickles:
-        pickle_paths = [Path(p).resolve() for p in pickles]
+        input_dir = Path(pickles).resolve()
     else:
         input_dir = Path(config.get("preprocessed_dir", "results/preprocessed")).resolve()
-        pickle_paths = sorted(input_dir.glob("*.pkl"))
+    pickle_paths = sorted(input_dir.glob("*.pkl"))
 
     # Load all DataFrames from pickle files into a dict
     appended_dict = {
@@ -173,10 +173,10 @@ def keywords(metrics: str, config_path: str, output_path: str, summary_path: str
     # 3. Load metrics DataFrames 
     logger.info(" Loading metrics DataFrame...")
     if metrics:
-        metrics_path = Path(metrics).resolve()
+        input_dir = Path(metrics).resolve()
     else:
         input_dir = Path(config.get("metrics_dir", "results/study_metrics")).resolve()
-        metrics_path = input_dir / "metrics.csv"
+    metrics_path = input_dir / "metrics.csv"
     metrics_df = pd.read_csv(metrics_path, low_memory=False)
     logger.info(f" Loaded metrics DataFrame: {metrics_df.shape[0]:,} rows × {metrics_df.shape[1]:,} columns")
     
@@ -209,7 +209,7 @@ def keywords(metrics: str, config_path: str, output_path: str, summary_path: str
 
     return keywords_df, keywords_metadata
 
-def finalize (config_path: str, output_path: str, summary_path: str, drop_rows: bool = False):
+def finalize (keywords: str, config_path: str, output_path: str, summary_path: str, drop_rows: bool = False):
     # 1. Load configuration and set up logger
     config = load_config(config_path)
     logger = configure_logger(config=config, loglevel=config.get("loglevel", "INFO"))
@@ -223,7 +223,10 @@ def finalize (config_path: str, output_path: str, summary_path: str, drop_rows: 
 
     # 3. Load keywords DataFrames 
     logger.info(" Loading keywords-enriched DataFrame...")
-    input_dir = Path(config.get("keywords_dir", "results/keywords")).resolve()
+    if keywords:
+        input_dir = Path(keywords).resolve()
+    else:
+        input_dir = Path(config.get("keywords_dir", "results/keywords")).resolve()
     keywords_path = input_dir / "keywords.csv"
     keywords_df = pd.read_csv(keywords_path, low_memory=False)
     logger.info(f" Loaded keywords DataFrame: {keywords_df.shape[0]:,} rows × {keywords_df.shape[1]:,} columns")
@@ -275,7 +278,7 @@ def main():
 
     # Metrics step
     metrics_parser = subparsers.add_parser("metrics", help="Aggregate project outcomes into a single dataset")
-    metrics_parser.add_argument("--pickles", nargs="+", default=None, help="Optional list of pickle file paths to process")
+    metrics_parser.add_argument("--pickles", default=None, help="Optional list of pickle file paths to process")
     metrics_parser.add_argument("--config", required=True, help="Path to config.yaml")
     metrics_parser.add_argument("--output", help="Path to output directory for aggregated outcomes dataset")
     metrics_parser.add_argument("--summary-json", help="Optional path to export metrics summary as JSON", required=False)
@@ -290,6 +293,7 @@ def main():
 
     # 📦 Finalize training dataset step
     finalize_parser = subparsers.add_parser("finalize", help="Filter out unnecessary columns and prepare final training dataset")
+    finalize_parser.add_argument("--keywords", help="Optional path to keywords CSV file")
     finalize_parser.add_argument("--config", required=True, help="Path to config.yaml")
     finalize_parser.add_argument("--output", help="Path to output CSV")
     finalize_parser.add_argument("--summary-json", help="Optional path to export training dataset summary as JSON", required=False)
@@ -308,7 +312,7 @@ def main():
         keywords_df, keywords_metadata = keywords(metrics = args.metrics, config_path=args.config, output_path=args.output, summary_path=args.summary_json, remove_stopwords=args.stopwords)
     
     elif args.command == "finalize":
-        MLdf, finalize_metadata = finalize(config_path=args.config, output_path=args.output, summary_path=args.summary_json, drop_rows = args.drop_output)
+        MLdf, finalize_metadata = finalize(keywords = args.keywords, config_path=args.config, output_path=args.output, summary_path=args.summary_json, drop_rows = args.drop_output)
 
 if __name__ == "__main__":
     main()
