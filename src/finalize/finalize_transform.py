@@ -5,8 +5,7 @@ import logging
 def filter_df(
     df: pd.DataFrame,
     config: Dict,
-    logger: Optional[logging.Logger] = None,
-    cutoff_value: Optional[int] = None
+    logger: Optional[logging.Logger] = None
 ) -> Tuple[pd.DataFrame, pd.DataFrame, Dict]:
     """
     Filters DataFrame into ML-ready subset using 'ml_columns' and 'total unique count'.
@@ -47,7 +46,7 @@ def filter_df(
 
     # Filter and split the dataframe based on cut off value 
     try:
-        cutoff_value = int(cutoff_value) if cutoff_value is not None else int(config.get("cutoff_value", 0))
+        cutoff_value = int(config.get("cutoff_value", 0))
 
         df_retained = df[df[required_col] >= cutoff_value]
         df_dropped = df[df[required_col] < cutoff_value]

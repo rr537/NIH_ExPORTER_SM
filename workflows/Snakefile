@@ -53,8 +53,6 @@ rule keywords:
         summary = str(Path(config['keywords_dir']) / "keywords_summary.json")
     log:
         f"logs/keywords_{date_string}{'_stopwords' if config.get('use_stopwords', False) else ''}.log"
-    params:
-        stopwords_flag = "--stopwords" if config.get("use_stopwords", False) else ""
     conda:
         "envs/nih.yml"
     shell:
@@ -64,7 +62,6 @@ rule keywords:
             --config {input.config} \
             --output {output.keywords_dir} \
             --summary-json {output.summary} \
-            {params.stopwords_flag} \
             > {log} 2>&1
         """
 

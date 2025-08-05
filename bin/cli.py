@@ -41,8 +41,6 @@ def main():
     finalize_parser.add_argument("--config", required=True, help="Path to config.yaml")
     finalize_parser.add_argument("--output", help="Optional Path to output CSV")
     finalize_parser.add_argument("--summary-json", help="Optional path to export training dataset summary as JSON", required=False)
-    finalize_parser.add_argument("--cutoff_value", type=int, help="Cut off value for filtering rows based on keyword counts. Default = 1")
-    finalize_parser.add_argument("--drop-output", action="store_true", help="Export dropped rows")
 
     args = parser.parse_args()
     print(f" Parsed command: {args.command}")
@@ -57,7 +55,7 @@ def main():
         keywords_df, keywords_metadata = keywords(metrics = args.metrics, config_path=args.config, output_path=args.output, summary_path=args.summary_json)
     
     elif args.command == "finalize":
-        MLdf, finalize_metadata = finalize(keywords = args.keywords, config_path=args.config, output_path=args.output, summary_path=args.summary_json, cutoff_value = args.cutoff_value, drop_rows = args.drop_output)
+        MLdf, finalize_metadata = finalize(keywords = args.keywords, config_path=args.config, output_path=args.output, summary_path=args.summary_json)
 
 if __name__ == "__main__":
     main()

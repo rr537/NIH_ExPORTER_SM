@@ -3,9 +3,9 @@ from typing import Optional, Dict, Any
 
 def assemble_finalize_metadata(
     finalized_df: pd.DataFrame,
-    dropped_df: Optional[pd.DataFrame] = None,
-    finalize_summary: Optional[Dict[str, Any]] = None,
-    drop_rows: bool = False
+    dropped_df: Optional[pd.DataFrame],
+    finalize_summary: Optional[Dict[str, Any]],
+    config: Dict
 ) -> Dict[str, Any]:
     """
     Assembles metadata dictionary after finalization process.
@@ -19,11 +19,14 @@ def assemble_finalize_metadata(
     Returns:
         Dictionary with finalization metadata.
     """
+    # Fetch config-based flag
+    export_dropped = config.get("export_drop_output", False)
+
     return {
         "finalize_summary": finalize_summary or {},
         "total_rows": int(finalized_df.shape[0]),
         "total_columns": int(finalized_df.shape[1]),
-        "exported_dropped_rows": int(dropped_df.shape[0]) if drop_rows and dropped_df is not None else 0
+        "exported_dropped_rows": int(dropped_df.shape[0]) if export_dropped and dropped_df is not None else 0
     }
 
 def build_finalize_summary(

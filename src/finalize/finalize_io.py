@@ -38,8 +38,8 @@ def export_finalized_csv(
     finalized_df: pd.DataFrame,
     dropped_df: Optional[pd.DataFrame],
     output_dir: Union[str, Path],
-    logger: Optional[logging.Logger] = None,
-    drop_rows: bool = False,
+    config: Dict,
+    logger: Optional[logging.Logger] = None
 ) -> Dict[str, Path]:
     """
     Exports the finalized DataFrame to 'finalized.csv' and optionally the dropped rows.
@@ -65,8 +65,11 @@ def export_finalized_csv(
     if logger:
         logger.info(f"Finalized DataFrame saved to: {finalized_path}")
 
+    # Fetch config-based flag
+    export_dropped = config.get("export_drop_output", False)
+
     # Save dropped rows if applicable
-    if drop_rows and dropped_df is not None:
+    if export_dropped and dropped_df is not None:
         dropped_path = output_dir / "dropped_rows.csv"
         dropped_df.to_csv(dropped_path, index=False)
         paths["dropped"] = dropped_path

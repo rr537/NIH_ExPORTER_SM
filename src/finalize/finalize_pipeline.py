@@ -7,7 +7,7 @@ from finalize.finalize_transform import filter_df
 from finalize.finalize_summary import assemble_finalize_metadata, build_finalize_summary
 
 
-def finalize(keywords: str, config_path: str, output_path: str, summary_path: str, cutoff_value: int, drop_rows: bool = False):
+def finalize(keywords: str, config_path: str, output_path: str, summary_path: str):
     # 1️. Load config and initialize logger
     config = load_config(config_path)
     logger = configure_logger(config.get("loglevel", "INFO"))
@@ -20,18 +20,17 @@ def finalize(keywords: str, config_path: str, output_path: str, summary_path: st
     MLdf, MLdf_dropped, finalize_summary = filter_df(
         keywords_df,
         config=config,
-        logger=logger,
-        cutoff_value=cutoff_value
+        logger=logger
     )
 
      # 4. Resolve output directory
     output_dir = resolve_output_path("finalize", output_path, config, logger)
 
     # 5. Export finalized CSV
-    export_finalized_csv(MLdf, MLdf_dropped, output_dir, logger, drop_rows)
+    export_finalized_csv(MLdf, MLdf_dropped, output_dir, config, logger)
 
     # 6. Build metadata and summary
-    finalize_metadata = assemble_finalize_metadata(MLdf, MLdf_dropped, finalize_summary, drop_rows)
+    finalize_metadata = assemble_finalize_metadata(MLdf, MLdf_dropped, finalize_summary, config)
 
     # 7. Build summary statistics
     finalize_summary = build_finalize_summary(finalize_metadata)
