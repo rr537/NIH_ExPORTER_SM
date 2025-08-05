@@ -7,7 +7,8 @@ src_path = Path(__file__).resolve().parent.parent / "src"
 sys.path.append(str(src_path))
 
 from preprocess.preprocess_pipeline import preprocess
-
+from metrics.metrics_pipeline import metrics
+from keywords.keywords_pipeline import keywords
 
 def main():
     parser = argparse.ArgumentParser(description="NIH ExPORTER CLI")
@@ -26,7 +27,7 @@ def main():
     metrics_parser.add_argument("--output", help="Path to output directory for aggregated outcomes dataset")
     metrics_parser.add_argument("--summary-json", help="Optional path to export metrics summary as JSON", required=False)
 
-    # ✨ Keyword enrichment step
+    # Keyword enrichment step
     keyword_parser = subparsers.add_parser("keywords", help="Count and flag keywords in project text related columns")
     keyword_parser.add_argument("--metrics", help="Optional path to metrics CSV file")
     keyword_parser.add_argument("--config", required=True, help="Path to config.yaml")
@@ -34,7 +35,7 @@ def main():
     keyword_parser.add_argument("--summary-json", help="Optional path to export keyword summary as JSON", required=False)
     keyword_parser.add_argument("--stopwords", action="store_true", help="Remove English stopwords during keyword enrichment")
 
-    # 📦 Finalize training dataset step
+    # Finalize training dataset step
     finalize_parser = subparsers.add_parser("finalize", help="Filter out unnecessary columns and prepare final training dataset")
     finalize_parser.add_argument("--keywords", help="Optional path to keywords CSV file")
     finalize_parser.add_argument("--config", required=True, help="Path to config.yaml")

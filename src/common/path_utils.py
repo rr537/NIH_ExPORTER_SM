@@ -9,7 +9,7 @@ def resolve_output_path(
     stage: str,
     output_path: Optional[Union[str, Path]],
     config: Optional[Dict],
-    logger: Optional[logging.Logger] = None
+    logger: Optional[logging.Logger]
 ) -> Path:
     """
     Resolves and ensures output directory for a stage. Uses config[stage+'_dir'], or falls back to output_dir/stage.
@@ -21,7 +21,7 @@ def resolve_output_path(
     if output_path:
         resolved_path = Path(output_path).resolve()
         if logger:
-            logger.info(f"📤 Using explicit output path for stage '{stage}': {resolved_path}")
+            logger.info(f"Using explicit output path for stage '{stage}': {resolved_path}")
     else:
         # Construct config key and fallback
         stage_key = f"{stage}_dir"
@@ -29,7 +29,7 @@ def resolve_output_path(
         stage_path = config.get(stage_key, root_dir / stage)
         resolved_path = Path(stage_path).resolve()
         if logger:
-            logger.info(f"📤 Using config/default output path for stage '{stage}': {resolved_path}")
+            logger.info(f"Using config/default output path for stage '{stage}': {resolved_path}")
 
     resolved_path.mkdir(parents=True, exist_ok=True)
     return resolved_path
@@ -49,34 +49,38 @@ INPUT_PATHS = {
     }
 }
 
-def resolve_input_path(stage: str, input_path: Optional[Union[str, Path]], config: Dict, logger=None) -> Path:
+def resolve_input_path(stage: str, input_path: Optional[Union[str, Path]], config: Dict, logger: logging.Logger) -> Path:
     stage_map = INPUT_PATHS.get(stage)
     if not stage_map:
         raise ValueError(f"Unknown stage: {stage}")
 
     if input_path:
         resolved = Path(input_path).resolve()
-        if logger: logger.info(f"Using explicit input path for '{stage}': {resolved}")
+        if logger:
+            logger.info(f"Using explicit input path for '{stage}': {resolved}")
         return resolved
 
     config_key = stage_map["config_key"]
     output_root = Path(config.get("output_dir", "results")).resolve()
     stage_path = Path(config.get(config_key, output_root / config_key)).resolve()
 
-    if logger: logger.info(f"Using config path for '{stage}': {stage_path}")
+    if logger:
+        logger.info(f"Using config path for '{stage}': {stage_path}")
     return stage_path
 
 def resolve_input_files(
     stage: str,
     input_path: Optional[Union[str, Path]],
     config: Optional[Dict],
-    logger: Optional[logging.Logger] = None
+    logger: Optional[logging.Logger]
 ) -> Union[Dict[str, Path], Path]:
     """
     Resolves either:
     - a directory of pickle files (for 'metrics')
     - a specific CSV file (for 'keywords' or 'finalize')
     """
+    if logger:
+        logger.info(" Determining file input paths...")
     input_dir = resolve_input_path(stage, input_path, config, logger)
     stage_map = INPUT_PATHS.get(stage)
 
