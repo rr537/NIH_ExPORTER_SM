@@ -1,8 +1,9 @@
 import logging
 from pathlib import Path
 from common.config_loader import load_config
+from typing import Optional
 
-def validate_config_paths(config_path: str, logger: logging.Logger) -> None:
+def validate_config_paths(config_path: str, logger: Optional[logging.Logger]) -> None:
     """Check for suspicious or absolute paths in config folder field."""
     config = load_config(config_path)
     folder_raw = config.get("folder", "")
@@ -22,7 +23,7 @@ def validate_config_paths(config_path: str, logger: logging.Logger) -> None:
             "relative paths help ensure portability."
         )
 
-def validate_data_sources(config_path: str, logger: logging.Logger) -> None:
+def validate_data_sources(config_path: str, logger: Optional[logging.Logger]) -> None:
     """Confirm subfolders exist and contain CSV files."""
     config = load_config(config_path)
     project_root = Path(__file__).resolve().parents[2]

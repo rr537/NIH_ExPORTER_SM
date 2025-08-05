@@ -31,7 +31,7 @@ def load_metrics_dataframe(
 def export_keywords_csv(
     keywords_df: pd.DataFrame,
     output_dir: Union[str, Path],
-    logger: logging.Logger
+    logger: Optional[logging.Logger]
 ) -> Path:
     """
     Saves the keyword-enriched DataFrame to keywords.csv in the output directory.
@@ -44,9 +44,6 @@ def export_keywords_csv(
     Returns:
         Path to saved CSV file
     """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
     keywords_path = output_dir / "keywords.csv"
     keywords_df.to_csv(keywords_path, index=False)
     logger.info(f"Keyword-enriched DataFrame saved to: {keywords_path}")
@@ -55,7 +52,7 @@ def export_keywords_csv(
 
 def export_summary_json(
     summary: Dict,
-    output_path: Union[str, Path],
+    output_dir: Union[str, Path],
     summary_path: Optional[Union[str, Path]] = None,
     logger: Optional[logging.Logger] = None
 ) -> Path:
@@ -64,17 +61,14 @@ def export_summary_json(
 
     Args:
         summary: Dictionary containing enrichment metrics
-        output_path: Base output directory
+        output_dir: Base output directory
         summary_path: Optional custom summary path
         logger: Optional logger for status messages
 
     Returns:
         Path to the saved JSON summary
     """
-    output_path = Path(output_path).resolve()
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    final_path = Path(summary_path).resolve() if summary_path else output_path / "keywords_summary.json"
+    final_path = Path(summary_path).resolve() if summary_path else output_dir / "keywords_summary.json"
 
     with open(final_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)

@@ -18,29 +18,34 @@ def filter_df(
             - finalize_summary: Summary dictionary of filtering process
     """
     required_col = "total unique count"
-
+    
+    # Check if required input dataframe is empty  
     if df.empty:
         if logger:
             logger.warning("Input DataFrame is empty.")
         return pd.DataFrame(), pd.DataFrame(), {}
-
+    
+    # Check if column for filtering is present in the input dataframe
     if required_col not in df.columns:
         if logger:
             logger.error(f"Column '{required_col}' not found in DataFrame.")
         return pd.DataFrame(), pd.DataFrame(), {}
-
+    
+    # Load 'ml_columns' from config
     columns_to_extract: List[str] = config.get("ml_columns", [])
     if not columns_to_extract:
         if logger:
             logger.warning("No columns defined in 'ml_columns' for training output.")
         return pd.DataFrame(), pd.DataFrame(), {}
-
+    
+    # Find any missing columns from 'ml_columns' that are not present in the input dataframe 
     missing_cols = [col for col in columns_to_extract if col not in df.columns]
     if missing_cols:
         if logger:
             logger.error(f"Missing ML columns: {missing_cols}")
         return pd.DataFrame(), pd.DataFrame(), {}
 
+    # Filter and split the dataframe based on cut off value 
     try:
         cutoff_value = int(cutoff_value) if cutoff_value is not None else int(config.get("cutoff_value", 0))
 
@@ -50,6 +55,7 @@ def filter_df(
         MLdf = df_retained[columns_to_extract]
         MLdf_dropped = df_dropped[columns_to_extract]
 
+    # Create a summary dictionary with metadata about the filtering process
         finalize_summary = {
             "ml_columns_used": columns_to_extract,
             "cutoff_value": cutoff_value,

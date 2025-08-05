@@ -1,14 +1,16 @@
 import pandas as pd
-import logging
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Dict, List, Optional, Tuple, Any, Union
-
 import json
+import logging
 
 # Entry point for pipeline ingestion
-def ingest_dataframes(config: Dict, logger: logging.Logger) -> Tuple[Dict[str, Dict[str, pd.DataFrame]], Dict[str, Dict]]:
+def ingest_dataframes(
+    config: Dict,
+    logger: Optional[logging.Logger] = None
+) -> Tuple[Dict[str, Dict[str, pd.DataFrame]], Dict[str, Dict]]:
     data_root = Path(__file__).resolve().parents[2] / config["folder"]
 
     raw_dict = load_csv_files(
@@ -24,7 +26,7 @@ def ingest_dataframes(config: Dict, logger: logging.Logger) -> Tuple[Dict[str, D
 
 # Folder-wise CSV ingestion
 def load_csv_files(
-    logger: logging.Logger,
+    logger: Optional[logging.Logger],
     main_folder: str,
     subfolders: List[str],
     use_parallel: bool = False,
@@ -35,15 +37,18 @@ def load_csv_files(
     for folder_name in subfolders:
         folder_path = Path(main_folder) / folder_name
         if not folder_path.exists():
-            logger.warning(f"Missing folder: {folder_path.resolve()}")
+            if logger:
+                logger.warning(f"Missing folder: {folder_path.resolve()}")
             continue
 
         csv_files = list(folder_path.glob("*.csv"))
         if not csv_files:
-            logger.warning(f"Folder exists but contains no CSVs: {folder_path.resolve()}")
+            if logger:
+                logger.warning(f"Folder exists but contains no CSVs: {folder_path.resolve()}")
             continue
 
-        logger.info(f"Processing {folder_name} with {len(csv_files)} CSV(s)...")
+        if logger:
+            logger.info(f"Processing {folder_name} with {len(csv_files)} CSV(s)...")
         dataframes[folder_name] = {}
 
         if use_parallel:
@@ -60,12 +65,16 @@ def load_csv_files(
                 if df.empty:
                     continue
                 dataframes[folder_name][key] = df
-                logger.info(f"Loaded {key} from {folder_name} ({len(df):,} rows, {df.memory_usage().sum()/1024/1024:.2f} MB)")
+                if logger:
+                    logger.info(
+                        f"Loaded {key} from {folder_name} ({len(df):,} rows, "
+                        f"{df.memory_usage().sum()/1024/1024:.2f} MB)"
+                    )
 
     return dataframes
 
-#  Individual file reader
-def read_csv_file(file_path: Path, logger: logging.Logger) -> pd.DataFrame:
+# Individual file reader
+def read_csv_file(file_path: Path, logger: Optional[logging.Logger] = None) -> pd.DataFrame:
     try:
         with file_path.open("rb") as f:
             df = pd.read_csv(
@@ -78,23 +87,27 @@ def read_csv_file(file_path: Path, logger: logging.Logger) -> pd.DataFrame:
         df.columns = [col.replace('\ufeff', '').replace('ï»¿', '').strip('"') for col in df.columns]
         return df
     except pd.errors.EmptyDataError:
-        logger.error(f"Empty file: {file_path.name}")
+        if logger:
+            logger.error(f"Empty file: {file_path.name}")
         return pd.DataFrame()
     except Exception as e:
-        logger.error(f"Failed to load {file_path.name}: {str(e)}", exc_info=True)
+        if logger:
+            logger.error(f"Failed to load {file_path.name}: {str(e)}", exc_info=True)
         return pd.DataFrame()
 
-#  Parallel wrapper
-def _read_and_store(file_path: Path, folder_name: str, logger: logging.Logger) -> Optional[Tuple[str, pd.DataFrame]]:
+# Parallel wrapper
+def _read_and_store(file_path: Path, folder_name: str, logger: Optional[logging.Logger] = None) -> Optional[Tuple[str, pd.DataFrame]]:
     key = file_path.stem
     df = read_csv_file(file_path, logger)
     if df.empty:
-        logger.warning(f"Empty DataFrame: {file_path.name}")
+        if logger:
+            logger.warning(f"Empty DataFrame: {file_path.name}")
         return None
-    logger.info(f"[Parallel] Loaded {key} from {folder_name}")
+    if logger:
+        logger.info(f"[Parallel] Loaded {key} from {folder_name}")
     return key, df
 
- # Collect summary of loaded DataFrames
+# Collect summary of loaded DataFrames
 def summarize_csv_load(dataframes: Dict[str, Dict[str, pd.DataFrame]]) -> Dict[str, Dict]:
     summary = {}
     for folder, files in dataframes.items():
@@ -102,7 +115,7 @@ def summarize_csv_load(dataframes: Dict[str, Dict[str, pd.DataFrame]]) -> Dict[s
             "folder": folder,
             "file_count": len(files),
             "total_rows": sum(df.shape[0] for df in files.values()),
-            "total_memory": sum(df.memory_usage().sum() for df in files.values()) / (1024 * 1024)  # MB
+            "total_memory": sum(df.memory_usage().sum() for df in files.values()) / (1024 * 1024)
         }
     return summary
 
@@ -110,34 +123,29 @@ def summarize_csv_load(dataframes: Dict[str, Dict[str, pd.DataFrame]]) -> Dict[s
 def save_pickle_files(
     appended_dict: Dict[str, pd.DataFrame],
     output_dir: Path,
-    logger: logging.Logger
+    logger: Optional[logging.Logger] = None
 ) -> None:
-    """
-    Saves each DataFrame in the dictionary to a pickle file under resolved output_path.
-    If output_path is None, resolves using config[config_key] or fallback.
-    """
-    logger.info(f"Saving {len(appended_dict)} pickle file(s) to: {output_dir}")
+    if logger:
+        logger.info(f"Saving {len(appended_dict)} pickle file(s) to: {output_dir}")
 
     print(" Exporting the following keys:", list(appended_dict.keys()))
     for name, df in appended_dict.items():
         path = output_dir / f"{name}.pkl"
         try:
             df.to_pickle(path)
-            logger.info(f"Saved {name}.pkl to {path}")
+            if logger:
+                logger.info(f"Saved {name}.pkl to {path}")
         except Exception as e:
-            logger.error(f"Failed to save {name}.pkl: {str(e)}", exc_info=True)
+            if logger:
+                logger.error(f"Failed to save {name}.pkl: {str(e)}", exc_info=True)
 
 # Export summary dictionary to JSON
 def export_summary_json(
     summary: Dict[str, Any],
     output_dir: Path,
-    logger: logging.Logger,
-    summary_path: Path = None
+    logger: Optional[logging.Logger] = None,
+    summary_path: Optional[Path] = None
 ) -> None:
-    """
-    Exports the summary dictionary to a JSON file. If no summary_path is given,
-    defaults to output_path/preprocessing_summary.json.
-    """
     if summary_path is None:
         summary_path = output_dir / "preprocessing_summary.json"
     else:
@@ -148,6 +156,8 @@ def export_summary_json(
     try:
         with open(summary_path, "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2)
-        logger.info(f"Preprocessing summary exported to: {summary_path}")
+        if logger:
+            logger.info(f"Preprocessing summary exported to: {summary_path}")
     except Exception as e:
-        logger.error(f"Failed to export summary JSON: {str(e)}", exc_info=True)
+        if logger:
+            logger.error(f"Failed to export summary JSON: {str(e)}", exc_info=True)

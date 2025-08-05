@@ -1,23 +1,33 @@
 import pandas as pd
+from typing import Dict, Tuple, List, Any, Optional
 import logging
-from typing import Dict, Tuple, List, Any
 
 # Column Renaming
 def rename_columns(
     config: dict,
     raw_dict: Dict[str, Dict[str, pd.DataFrame]],
-    logger: logging.Logger
+    logger: Optional[logging.Logger] = None
 ) -> Tuple[Dict[str, Dict[str, pd.DataFrame]], Dict[str, List[str]]]:
+   
     """
-    Renames columns in all DataFrames using config['rename_columns_map'].
-    Returns updated DataFrames and a summary of changes per file.
+    Applies renaming rules to all DataFrames using config['rename_columns_map'],
+    logging detailed column changes and returning the renamed structure.
+
+    Returns:
+        - renamed_dict: DataFrames with updated column names
+        - rename_summary: Dict summarizing per-file column changes
     """
+    if logger:
+        logger.info("Renaming columns using configured rules...")
     rename_map = config.get("rename_columns_map", {})
+    
     if not rename_map:
-        logger.warning("No renaming rules found in config['rename_columns_map'].")
+        if logger:
+            logger.warning("No renaming rules found in config['rename_columns_map'].")
         return raw_dict, {}
 
-    logger.info(f"Applying {len(rename_map)} column renaming rules...")
+    if logger:
+        logger.info(f"Applying {len(rename_map)} column renaming rules...")
     renamed_dict = {}
     rename_summary = {}
 
@@ -34,7 +44,7 @@ def rename_columns(
                 if col in original and rename_map[col] in updated
             ]
 
-            if changes:
+            if changes and logger:
                 logger.info(f"[{file_name}] Renamed columns: {', '.join(changes)}")
                 rename_summary[file_name] = changes
 
@@ -46,10 +56,12 @@ def rename_columns(
 def append_dataframes_by_folder(
     config: dict,
     dataframes: Dict[str, Dict[str, pd.DataFrame]],
-    logger: logging.Logger
+    logger: Optional[logging.Logger] = None
 ) -> Tuple[Dict[str, pd.DataFrame], Dict[str, Dict[str, Any]]]:
     """
-    Concatenates DataFrames within each folder. Handles schema mismatch and logs metadata.
+    Appends all DataFrames within each folder into a single stacked DataFrame.
+    Also summarizes column consistency and row/column statistics.
+    Returns both the appended DataFrames and the summary dictionary.
     """
     force_append = config.get("force_append", False)
     appended_dict = {}
@@ -67,9 +79,10 @@ def append_dataframes_by_folder(
             summary["unexpected_columns_added"] = len(unexpected)
 
             if unexpected and not force_append:
-                logger.warning(f"Column mismatch in '{folder}': {unexpected}")
+                if logger:
+                    logger.warning(f"Column mismatch in '{folder}': {unexpected}")
+                    logger.info(f"Skipping append for '{folder}' due to mismatch.")
                 summary["skipped"] = True
-                logger.info(f"Skipping append for '{folder}' due to mismatch.")
                 summary_dict[folder] = summary
                 continue
 
@@ -78,14 +91,17 @@ def append_dataframes_by_folder(
 
             summary["total_rows"] = appended_df.shape[0]
             summary["total_columns"] = appended_df.shape[1]
-            logger.info(
-                f"Appended {summary['num_files']} files in '{folder}': "
-                f"{summary['total_rows']:,} rows, {summary['total_columns']:,} columns."
-            )
+
+            if logger:
+                logger.info(
+                    f"Appended {summary['num_files']} files in '{folder}': "
+                    f"{summary['total_rows']:,} rows, {summary['total_columns']:,} columns."
+                )
 
         except Exception as e:
             summary["error"] = str(e)
-            logger.error(f"Error in folder '{folder}': {str(e)}", exc_info=True)
+            if logger:
+                logger.error(f"Error in folder '{folder}': {str(e)}", exc_info=True)
 
         summary_dict[folder] = summary
 
