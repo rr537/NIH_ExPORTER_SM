@@ -46,6 +46,7 @@ def enrich_with_keyword_metrics(
     def chunk_series(series: pd.Series, chunk_size: int) -> List[pd.Series]:
         return [series[i:i + chunk_size] for i in range(0, len(series), chunk_size)]
 
+    use_parallel = config.get("parallel", False)
     max_workers = config.get("workers", 4)
     chunk_size = max(1, len(df) // max_workers)
     chunks = chunk_series(df["combined_text"], chunk_size)
@@ -61,8 +62,13 @@ def enrich_with_keyword_metrics(
         return total, unique, flagged
 
     # Parallel execution
-    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="flash") as executor:
-        results = list(executor.map(process_batch, chunks))
+    if use_parallel:
+        with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="flash") as executor:
+            results = list(executor.map(process_batch, chunks))
+
+    # Sequential executionfor environments where concurrency is limited or unnecessary
+    else:
+        results = [process_batch(chunk) for chunk in chunks]
 
     # Flatten results
     total_flat = [count for batch in results for count in batch[0]]
