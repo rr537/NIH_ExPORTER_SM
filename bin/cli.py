@@ -9,6 +9,7 @@ sys.path.append(str(src_path))
 from preprocess.preprocess_pipeline import preprocess
 from metrics.metrics_pipeline import metrics
 from keywords.keywords_pipeline import keywords
+from finalize.finalize_pipeline import finalize 
 
 def main():
     parser = argparse.ArgumentParser(description="NIH ExPORTER CLI")

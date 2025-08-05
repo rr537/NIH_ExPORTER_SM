@@ -12,8 +12,8 @@ def keywords(metrics: str, config_path: str, output_path: str, summary_path: str
     logger = configure_logger(config.get("loglevel", "INFO"))
 
     # 2. Resolve input path and load metrics DataFrame
-    input_path = resolve_input_files("keywords", metrics, config, logger)
-    metrics_df = load_metrics_dataframe(input_path, logger)
+    metrics_path = resolve_input_files("keywords", metrics, config, logger)
+    metrics_df = load_metrics_dataframe(metrics_path, logger)
 
     # 3. Run keyword preparation and enrichment
     treatments, diseases, keywords_summary = prepare_keywords(config, logger, remove_stopwords=remove_stopwords)
