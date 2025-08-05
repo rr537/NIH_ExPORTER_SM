@@ -46,11 +46,13 @@ def enrich_keywords(
 def load_keywords_from_config(
     config: Dict,
     logger: Optional[logging.Logger] = None,
-    remove_stopwords: bool = False
 ) -> Tuple[List[str], List[str]]:
     try:
-        raw_treatments = config.get("keywords", {}).get("treatment", [])
-        raw_diseases = config.get("keywords", {}).get("disease", [])
+        keyword_section = config.get("keywords", {})
+        remove_stopwords = keyword_section.get("remove_stopwords", False)
+
+        raw_treatments = keyword_section.get("treatment", [])
+        raw_diseases = keyword_section.get("disease", [])
 
         if logger:
             logger.info(f"Loaded {len(raw_treatments)} treatments, {len(raw_diseases)} diseases")
@@ -68,9 +70,9 @@ def load_keywords_from_config(
 def prepare_keywords(
     config: Dict,
     logger: Optional[logging.Logger] = None,
-    remove_stopwords: bool = False
 ) -> Tuple[List[str], List[str], Dict[str, Dict]]:
-    treatments, diseases = load_keywords_from_config(config, logger, remove_stopwords)
+    
+    treatments, diseases = load_keywords_from_config(config, logger)
 
     summary = {
         "keyword_counts": {

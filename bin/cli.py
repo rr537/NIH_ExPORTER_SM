@@ -34,7 +34,6 @@ def main():
     keyword_parser.add_argument("--config", required=True, help="Path to config.yaml")
     keyword_parser.add_argument("--output", help="Path to output CSV")
     keyword_parser.add_argument("--summary-json", help="Optional path to export keyword summary as JSON", required=False)
-    keyword_parser.add_argument("--stopwords", action="store_true", help="Remove English stopwords during keyword enrichment")
 
     # Finalize training dataset step
     finalize_parser = subparsers.add_parser("finalize", help="Filter out unnecessary columns and prepare final training dataset")
@@ -55,7 +54,7 @@ def main():
         metrics_df, metrics_metadata = metrics(pickles = args.pickles, config_path=args.config, output_path=args.output, summary_path=args.summary_json)
 
     elif args.command == "keywords":
-        keywords_df, keywords_metadata = keywords(metrics = args.metrics, config_path=args.config, output_path=args.output, summary_path=args.summary_json, remove_stopwords=args.stopwords)
+        keywords_df, keywords_metadata = keywords(metrics = args.metrics, config_path=args.config, output_path=args.output, summary_path=args.summary_json)
     
     elif args.command == "finalize":
         MLdf, finalize_metadata = finalize(keywords = args.keywords, config_path=args.config, output_path=args.output, summary_path=args.summary_json, cutoff_value = args.cutoff_value, drop_rows = args.drop_output)

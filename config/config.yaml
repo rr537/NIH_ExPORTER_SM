@@ -16,6 +16,7 @@ rename_columns_map:
   Core Project Number: PROJECT_NUMBER
 
 keywords:
+  remove_stopwords: true
   treatment:
     - CRISPR
     - gene editing
