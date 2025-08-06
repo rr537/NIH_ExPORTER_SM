@@ -118,6 +118,8 @@ cutoff_value: 1
 loglevel: DEBUG
 logs_dir: logs
 log_file: nih_export_log.txt
+log_to_file: True 
+log_to_console: True
 workers: 11
 
 # 📂 Output settings

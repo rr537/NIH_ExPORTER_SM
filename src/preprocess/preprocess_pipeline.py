@@ -11,7 +11,7 @@ from .preprocess_summary import assemble_preprocessing_metadata, build_preproces
 def preprocess(config_path: str, output_path: str = None, summary_path: str = None):
     # 1. Load configuration and set up logger
     config = load_config(config_path)
-    logger = configure_logger(config.get("loglevel", "INFO"))
+    logger = configure_logger(config=config)
 
     # 2. Validate config paths and data sources
     validate_config_paths(config_path, logger)

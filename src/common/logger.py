@@ -36,6 +36,14 @@ def configure_logger(
     Creates timestamped log files unless a specific log_file is provided.
     """
 
+    config = config or {}
+
+    # Override parameters from config if available
+    loglevel = config.get("loglevel", loglevel)
+    log_file = config.get("log_file", log_file)
+    log_to_file = config.get("log_to_file", log_to_file)
+    log_to_console = config.get("log_to_console", log_to_console)
+
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
     log_path = _resolve_log_path(config, log_file, timestamp)
 

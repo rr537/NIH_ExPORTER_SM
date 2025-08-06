@@ -13,7 +13,7 @@ from typing import Optional, List
 def metrics(pickles: Optional[List[str]], config_path: str, output_path: str, summary_path: str):
     # 1. Load configuration and set up logger
     config = load_config(config_path)
-    logger = configure_logger(config.get("loglevel", "INFO"))
+    logger = configure_logger(config=config)
 
      # 2. Resolve input pickle files
     pickle_map = resolve_input_files("metrics", pickles, config, logger)

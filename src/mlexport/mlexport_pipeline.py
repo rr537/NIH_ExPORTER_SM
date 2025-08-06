@@ -10,7 +10,7 @@ from .mlexport_summary import assemble_mlexport_metadata, build_mlexport_summary
 def mlexport(keywords: str, config_path: str, output_path: str, summary_path: str):
     # 1️. Load config and initialize logger
     config = load_config(config_path) 
-    logger = configure_logger(config.get("loglevel", "INFO"))
+    logger = configure_logger(config=config)
 
     # 2️. Resolve input path and ingest keywords DataFrame
     keywords_path = resolve_input_files("mlexport", keywords, config, logger)
