@@ -1,5 +1,7 @@
 # Configuration for NIH ExPORTER Workflow
 
+env_path: ./envs/nih.yml
+
 folder: data/raw
 
 subfolders:
