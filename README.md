@@ -7,7 +7,15 @@
 ![Last Commit](https://img.shields.io/github/last-commit/rr537/NIH_ExPORTER_SM)
 ![Stars](https://img.shields.io/github/stars/rr537/NIH_ExPORTER_SM?style=social)
 
-A scalable and modular Snakemake workflow for processing NIH ExPORTER datasets into machine learning–ready training files—optimized for finding CRISPR/gene therapy related treatments for rare diseases but can be applied to other treatment-disease combinations, or used just to find relevant treatments are diseases. Features include preprocessing, keyword enrichment via FlashText, and configurable training data generation.
+A scalable and modular **Snakemake workflow** for transforming NIH ExPORTER datasets into machine learning–ready training files. Designed to identify **CRISPR and gene therapy–related treatments for rare diseases**, the pipeline is fully configurable and adaptable to other treatment-disease combinations.
+
+### ✨ Core Features
+- **Modular preprocessing** of NIH datasets with audit-ready summaries
+- **Keyword enrichment** using FlashText with support for pluralization, stopword filtering, and accent normalization
+- **Config-driven ML export** with customizable filters and column selection
+- **Parallel processing** and conda-based reproducibility
+
+Whether you're exploring biomedical trends or exploring NIH funding history, this pipeline offers a robust foundation for scalable, transparent analysis.
 
 ---
 
