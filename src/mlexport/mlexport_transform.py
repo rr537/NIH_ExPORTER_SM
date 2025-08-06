@@ -14,7 +14,7 @@ def filter_df(
         Tuple:
             - MLdf: DataFrame where count ≥ cutoff
             - MLdf_dropped: DataFrame where count < cutoff
-            - finalize_summary: Summary dictionary of filtering process
+            - mlexport_summary: Summary dictionary of filtering process
     """
     required_col = "total unique count"
     
@@ -55,7 +55,7 @@ def filter_df(
         MLdf_dropped = df_dropped[columns_to_extract]
 
     # Create a summary dictionary with metadata about the filtering process
-        finalize_summary = {
+        mlexport_summary = {
             "ml_columns_used": columns_to_extract,
             "cutoff_value": cutoff_value,
             "total_input_rows": int(df.shape[0]),
@@ -71,7 +71,7 @@ def filter_df(
             logger.info(f"Retained {MLdf.shape[0]} training rows, dropped {MLdf_dropped.shape[0]}")
             logger.info(f"Columns used for ML: {columns_to_extract}")
 
-        return MLdf, MLdf_dropped, finalize_summary
+        return MLdf, MLdf_dropped, mlexport_summary
 
     except KeyError:
         if logger:

@@ -3,7 +3,7 @@ import logging
 from typing import Optional, Union, Dict
 
 #  Define valid stages
-VALID_STAGES = ["preprocess", "metrics", "keywords", "finalize"]
+VALID_STAGES = ["preprocess", "metrics", "keywords", "mlexport"]
 
 def resolve_output_path(
     stage: str,
@@ -43,7 +43,7 @@ INPUT_PATHS = {
         "config_key": "metrics_dir",
         "file_name": "metrics.csv"
     },
-    "finalize": {
+    "mlexport": {
         "config_key": "keywords_dir",
         "file_name": "keywords.csv"
     }
@@ -77,7 +77,7 @@ def resolve_input_files(
     """
     Resolves either:
     - a directory of pickle files (for 'metrics')
-    - a specific CSV file (for 'keywords' or 'finalize')
+    - a specific CSV file (for 'keywords' or 'mlexport')
     """
     if logger:
         logger.info(" Determining file input paths...")
@@ -89,7 +89,7 @@ def resolve_input_files(
         file_paths = sorted(input_dir.glob(stage_map["file_glob"]))
         return {p.stem: p for p in file_paths}
 
-    # Single CSV file (keywords/finalize)
+    # Single CSV file (keywords/mlexport)
     elif "file_name" in stage_map:
         file_path = input_dir / stage_map["file_name"]
         if logger:

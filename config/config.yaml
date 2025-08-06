@@ -110,7 +110,7 @@ ml_columns:
 force_append: true # For append_dataframes_by_folder () in preprocess ()
 parallel: true # For inital load of dataframes in preprocess() and keyword enrichment in keywords() 
 
-# finalize
+# mlexport
 export_drop_output: true
 cutoff_value: 1
 
@@ -125,4 +125,4 @@ output_dir: results
 preprocess_dir: results/preprocessed
 metrics_dir: results/study_metrics
 keywords_dir: results/keywords
-finalize_dir: results/finalize
+mlexport_dir: results/mlexport

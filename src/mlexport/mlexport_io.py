@@ -1,8 +1,7 @@
 import pandas as pd
 from pathlib import Path
-from typing import Optional, Union, Dict, Any
+from typing import Optional, Union, Dict
 import logging
-import json
 
 def load_keywords_dataframe(
     keywords_path: str,
@@ -34,22 +33,22 @@ def load_keywords_dataframe(
 
     return keywords_df
 
-def export_finalized_csv(
-    finalized_df: pd.DataFrame,
+def export_mlexport_csv(
+    mlexport_df: pd.DataFrame,
     dropped_df: Optional[pd.DataFrame],
     output_dir: Union[str, Path],
     config: Dict,
     logger: Optional[logging.Logger] = None
 ) -> Dict[str, Path]:
     """
-    Exports the finalized DataFrame to 'finalized.csv' and optionally the dropped rows.
+    Exports the ML training DataFrame to 'mlexport.csv' and optionally the dropped rows.
 
     Args:
-        finalized_df: Final DataFrame to export.
-        output_dir: Directory to save the CSV files.
-        logger: Optional logger for status messages.
+        mlexport_df: Filtered DataFrame to export.
         dropped_df: Optional DataFrame of dropped rows.
-        drop_rows: Whether to export dropped rows.
+        output_dir: Directory to save the CSV files.
+        config: config dict. 
+        logger: Optional logger for status messages.
 
     Returns:
         Dictionary containing paths to saved CSV(s).
@@ -57,13 +56,13 @@ def export_finalized_csv(
 
     paths = {}
 
-    # Save finalized DataFrame
-    finalized_path = output_dir / "finalized.csv"
-    finalized_df.to_csv(finalized_path, index=False)
-    paths["finalized"] = finalized_path
+    # Save mlexport DataFrame
+    mlexport_path = output_dir / "mlexport.csv"
+    mlexport_df.to_csv(mlexport_path, index=False)
+    paths["mlexport"] = mlexport_path
 
     if logger:
-        logger.info(f"Finalized DataFrame saved to: {finalized_path}")
+        logger.info(f"Finalized DataFrame saved to: {mlexport_path}")
 
     # Fetch config-based flag
     export_dropped = config.get("export_drop_output", False)

@@ -120,7 +120,7 @@ This stage enriches the metrics dataset with keyword-level insights, including d
   - Matching coverage
   - Stopword usage (if enabled)
 
-## Step 4: ML Exporter 
+## Step 4: ML Export
 
 This stage filters the keyword-enriched dataset to produce a machine learning–ready output. It applies configurable rules to select relevant records and exports both the final and dropped rows.
 
@@ -144,11 +144,37 @@ This stage filters the keyword-enriched dataset to produce a machine learning–
 ---
 
 ## 🚀 Features
--  **Config-driven folder & column mapping**
--  **Deduplication logic** for clean, reliable outputs
--  **Keyword tagging** with FlashText: enrichment, stopword control, plural/punctuation/accent handling
--  **Parallel processing support** for scalability
--  **Snakemake automation** for reproducibility
+## 🚀 Features
+
+- **Modular Rule Design**  
+  Clean separation of logic across `preprocess`, `metrics`, `keywords`, and `mlexport` stages for maintainability and clarity.
+
+- **Config-Driven Execution**  
+  Centralized `config.yaml` controls paths, filters, keyword lists, logging levels, and export options—no hardcoded values.
+
+- **Robust Deduplication**  
+  Full-record comparison with detailed tracking of unique, total, and excess duplicates. Outputs audit-ready summaries.
+
+- **Keyword Enrichment with FlashText**  
+  Fast keyword matching with support for pluralization, punctuation, stopword filtering, and category merging.
+
+- **Parallel & Batch Processing**  
+  Optimized for scalability across large datasets using concurrent processing strategies.
+
+- **Audit-Ready Summaries**  
+  Each stage exports structured JSON summaries with row counts, metadata, and transformation stats.
+
+- **Snakemake Automation**  
+  Fully reproducible workflow with conda environment support, logging, and rule-level modularity.
+
+- **ML-Ready Dataset Export**  
+  Final output is filtered and curated for downstream machine learning tasks, with optional dropped-row tracking.
+
+- **Environment Portability**  
+  Uses absolute path resolution and centralized environment management (`envs/nih.yml`) for cross-platform compatibility.
+
+- **Clear Logging & Diagnostics**  
+  Stage-specific logs with configurable verbosity for debugging and traceability.
 
 ---
 
@@ -250,7 +276,7 @@ python bin/cli.py metrics --config config/config.yaml \
 python bin/cli.py keywords --config config/config.yaml \
 
 # Finalize
-python bin/cli.py finalize --config config/config.yaml \
+python bin/cli.py mlexport --config config/config.yaml \
 ```
 
 ### 📤 Pipeline Outputs

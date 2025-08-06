@@ -1,50 +1,50 @@
 import pandas as pd
 from typing import Optional, Dict, Any
 
-def assemble_finalize_metadata(
-    finalized_df: pd.DataFrame,
+def assemble_mlexport_metadata(
+    mlexport_df: pd.DataFrame,
     dropped_df: Optional[pd.DataFrame],
-    finalize_summary: Optional[Dict[str, Any]],
+    mlexport_summary: Optional[Dict[str, Any]],
     config: Dict
 ) -> Dict[str, Any]:
     """
-    Assembles metadata dictionary after finalization process.
+    Assembles metadata dictionary after filtering process.
 
     Args:
-        finalized_df: Finalized DataFrame.
+        mlexport_df: Finalized DataFrame.
         dropped_df: Optional DataFrame of dropped rows.
-        finalize_summary: Optional ML-specific summary dict.
-        drop_rows: Whether dropped rows were exported.
+        mlexport_summary: Optional ML-specific summary dict.
+        config: config dict
 
     Returns:
-        Dictionary with finalization metadata.
+        Dictionary with filtering metadata.
     """
     # Fetch config-based flag
     export_dropped = config.get("export_drop_output", False)
 
     return {
-        "finalize_summary": finalize_summary or {},
-        "total_rows": int(finalized_df.shape[0]),
-        "total_columns": int(finalized_df.shape[1]),
+        "mlexport_summary": mlexport_summary or {},
+        "total_rows": int(mlexport_df.shape[0]),
+        "total_columns": int(mlexport_df.shape[1]),
         "exported_dropped_rows": int(dropped_df.shape[0]) if export_dropped and dropped_df is not None else 0
     }
 
-def build_finalize_summary(
-    finalize_stats: Optional[Dict[str, Any]] = None
+def build_mlexport_summary(
+    mlexport_stats: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
-    Builds a structured summary from finalize_stats for ML training output.
+    Builds a structured summary from mlexport_stats for ML training output.
 
     Args:
-        finalize_stats: Dictionary containing finalize metadata.
+        mlexport_stats: Dictionary containing mlexport metadata.
 
     Returns:
         Nested summary dictionary.
     """
     summary = {}
 
-    if finalize_stats:
-        fs = finalize_stats.get("finalize_summary", {})
+    if mlexport_stats:
+        fs = mlexport_stats.get("mlexport_summary", {})
         summary["ml_training"] = {
             "filter_summary": {
                 "ml_columns_used": fs.get("ml_columns_used", []),
@@ -56,9 +56,9 @@ def build_finalize_summary(
                 "percent_dropped": fs.get("percent_dropped")
             },
             "output_dimensions": {
-                "total_rows": finalize_stats.get("total_rows"),
-                "total_columns": finalize_stats.get("total_columns"),
-                "exported_dropped_rows": finalize_stats.get("exported_dropped_rows", 0)
+                "total_rows": mlexport_stats.get("total_rows"),
+                "total_columns": mlexport_stats.get("total_columns"),
+                "exported_dropped_rows": mlexport_stats.get("exported_dropped_rows", 0)
             }
         }
 

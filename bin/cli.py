@@ -9,7 +9,7 @@ sys.path.append(str(src_path))
 from preprocess.preprocess_pipeline import preprocess
 from metrics.metrics_pipeline import metrics
 from keywords.keywords_pipeline import keywords
-from finalize.finalize_pipeline import finalize 
+from mlexport.mlexport_pipeline import mlexport 
 
 def main():
     parser = argparse.ArgumentParser(description="NIH ExPORTER CLI")
@@ -36,11 +36,11 @@ def main():
     keyword_parser.add_argument("--summary-json", help="Optional path to export keyword summary as JSON", required=False)
 
     # Finalize training dataset step
-    finalize_parser = subparsers.add_parser("finalize", help="Filter out unnecessary columns and prepare final training dataset")
-    finalize_parser.add_argument("--keywords", help="Optional path to keywords CSV file")
-    finalize_parser.add_argument("--config", required=True, help="Path to config.yaml")
-    finalize_parser.add_argument("--output", help="Optional Path to output CSV")
-    finalize_parser.add_argument("--summary-json", help="Optional path to export training dataset summary as JSON", required=False)
+    mlexport_parser = subparsers.add_parser("mlexport", help="Filter out unnecessary columns and prepare final training dataset")
+    mlexport_parser.add_argument("--keywords", help="Optional path to keywords CSV file")
+    mlexport_parser.add_argument("--config", required=True, help="Path to config.yaml")
+    mlexport_parser.add_argument("--output", help="Optional Path to output CSV")
+    mlexport_parser.add_argument("--summary-json", help="Optional path to export training dataset summary as JSON", required=False)
 
     args = parser.parse_args()
     print(f" Parsed command: {args.command}")
@@ -54,8 +54,8 @@ def main():
     elif args.command == "keywords":
         keywords_df, keywords_metadata = keywords(metrics = args.metrics, config_path=args.config, output_path=args.output, summary_path=args.summary_json)
     
-    elif args.command == "finalize":
-        MLdf, finalize_metadata = finalize(keywords = args.keywords, config_path=args.config, output_path=args.output, summary_path=args.summary_json)
+    elif args.command == "mlexport":
+        MLdf, mlexport_metadata = mlexport(keywords = args.keywords, config_path=args.config, output_path=args.output, summary_path=args.summary_json)
 
 if __name__ == "__main__":
     main()
