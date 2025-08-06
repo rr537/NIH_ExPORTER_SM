@@ -117,7 +117,6 @@ cutoff_value: 1
 # 🧪 Execution settings
 loglevel: DEBUG
 logs_dir: logs
-log_file: nih_export_log.txt
 log_to_file: True 
 log_to_console: True
 workers: 11
@@ -125,6 +124,6 @@ workers: 11
 # 📂 Output settings
 output_dir: results
 preprocess_dir: results/preprocessed
-metrics_dir: results/study_metrics
+metrics_dir: results/metrics
 keywords_dir: results/keywords
 mlexport_dir: results/mlexport

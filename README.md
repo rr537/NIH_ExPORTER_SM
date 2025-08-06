@@ -144,7 +144,6 @@ This stage filters the keyword-enriched dataset to produce a machine learning–
 ---
 
 ## 🚀 Features
-## 🚀 Features
 
 - **Modular Rule Design**  
   Clean separation of logic across `preprocess`, `metrics`, `keywords`, and `mlexport` stages for maintainability and clarity.
@@ -156,7 +155,7 @@ This stage filters the keyword-enriched dataset to produce a machine learning–
   Full-record comparison with detailed tracking of unique, total, and excess duplicates. Outputs audit-ready summaries.
 
 - **Keyword Enrichment with FlashText**  
-  Fast keyword matching with support for pluralization, punctuation, stopword filtering, and category merging.
+  Fast keyword matching with support for pluralization, punctuation, and stopword filtering.
 
 - **Parallel & Batch Processing**  
   Optimized for scalability across large datasets using concurrent processing strategies.
@@ -178,40 +177,69 @@ This stage filters the keyword-enriched dataset to produce a machine learning–
 
 ---
 
-## 📂 Directory Structure
+## 📁 Directory Structure
 
 ```text
 project-root/
+├── workflows/
+│   ├── Snakefile                    # Entry point for Snakemake
+│   └── rules/                       # Modular rule files
+│       ├── common.smk               # Shared utilities and functions
+│       ├── preprocess.smk           # Data ingestion, renaming, and appending
+│       ├── metrics.smk              # Linking, aggregation, and deduplication
+│       ├── keywords.smk             # Keyword tagging and enrichment
+│       └── mlexport.smk             # ML dataset filtering and export
 ├── config/
-│   └── config.yaml
+│   └── config.yaml                  # Centralized pipeline configuration
 ├── envs/
-│   └── nih.yml
+│   └── nih.yml                      # Conda environment for reproducibility
 ├── logs/
+│   └── *.log                        # Stage-specific logs with timestamps
 ├── data/
-│   └── raw/
-│       ├── Projects/
-│       ├── Abstracts/
-│       ├── Publications/
+│   └── raw/                         # Source NIH ExPORTER datasets
+│       ├── PRJ/
+│       ├── PRJABS/
+│       ├── PUB/
 │       ├── Patents/
-│       ├── Clinical Studies/
-│       └── Linked Publications/
+│       ├── ClinicalStudies/
+│       └── PUBLINK/
 ├── results/
-├── scripts/
-│   ├── cli.py
-│   ├── pipeline.py
-│   ├── config_loader.py
-│   ├── preprocessing.py
-│   ├── enrichment.py
-│   ├── keywords.py
-│   ├── merge.py
-│   ├── aggregation.py
-│   ├── training.py
-│   ├── loader.py
-│   └── logger.py
-├── Snakefile
+│   ├── preprocess/                 # Pickled and summary outputs from preprocessing
+│   ├── metrics/                    # Aggregated metrics and deduplication outputs
+│   ├── keywords/                   # Keyword-enriched datasets and summaries
+│   └── mlexport/                   # Final ML-ready dataset and dropped rows
+├── bin/
+│   └── cli.py                      # CLI entry point for each pipeline stage
+├── src/
+│   └── common/
+│       ├── config_loader.py  #
+│       ├── logger.py
+│       └── path_utils.py
+│   └── preprocess/
+│       ├── preprocess_pipeline.py  
+│       ├── preprocess_validator.py 
+│       ├── preprocess_io.py
+│       ├── preprocess_transform.py
+│       └── preprocess_summary.py
+│   └── metrics/
+│       ├── metrics_pipeline.py  
+│       ├── metrics_io.py  
+│       ├── metrics_merge.py  
+│       ├── metrics_aggregate.py  
+│       ├── metrics_dedupe.py  
+│       └── metrics_summary.py  
+│   └── keywords/
+│       ├── keywords_pipeline.py  
+│       ├── keywords_io.py  
+│       ├── keywords_generator.py  
+│       └── keywords_enrichment.py  
+│   └── mlexport/
+│       ├── mlexport_pipeline.py  
+│       ├── mlexport_io.py  
+│       ├── mlexport_transform.py  
+│       └── mlexport_summary.py  
 ├── LICENSE.md
 └── README.md
-```
 
 ---
 
