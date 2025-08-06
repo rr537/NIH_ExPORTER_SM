@@ -1,8 +1,9 @@
 from common.config_loader import load_config
 from common.logger import configure_logger
 from common.path_utils import resolve_output_path
+from common.io_utils import export_summary_json
 from .preprocess_validator import validate_config_paths, validate_data_sources
-from .preprocess_io import ingest_dataframes, save_pickle_files, export_summary_json
+from .preprocess_io import ingest_dataframes, save_pickle_files
 from .preprocess_transform import rename_columns, append_dataframes_by_folder
 from .preprocess_summary import assemble_preprocessing_metadata, build_preprocessing_summary
 
@@ -34,6 +35,6 @@ def preprocess(config_path: str, output_path: str = None, summary_path: str = No
     preprocess_summary = build_preprocessing_summary(metadata_raw)
 
     # 8. Export summary to JSON
-    export_summary_json(preprocess_summary, output_dir, logger, summary_path)
+    export_summary_json(preprocess_summary, output_dir, default_filename="preprocessing_summary.json", summary_path=summary_path, logger=logger)
 
     return appended_dict, preprocess_summary

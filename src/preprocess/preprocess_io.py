@@ -149,7 +149,7 @@ def export_summary_json(
     if summary_path is None:
         summary_path = output_dir / "preprocessing_summary.json"
     else:
-        summary_path = summary_path.resolve()
+        summary_path = Path(summary_path).resolve()
 
     summary_path.parent.mkdir(parents=True, exist_ok=True)
 

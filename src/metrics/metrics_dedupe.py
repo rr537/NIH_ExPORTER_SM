@@ -60,7 +60,7 @@ def remove_true_duplicates_from_df(
     if total_duplicates > 0:
         if logger:
             logger.info(f"Found {total_duplicates:,} duplicate rows in 'Aggregate_output'. Showing sample...")
-            logger.debug(dedupe_df[duplicates_all].head())
+            logger.info(dedupe_df[duplicates_all].head())
         dedupe_df = dedupe_df.drop_duplicates()
         if logger:
             logger.info(f"Duplicates removed — new shape: {dedupe_df.shape[0]:,} rows × {dedupe_df.shape[1]:,} columns")
