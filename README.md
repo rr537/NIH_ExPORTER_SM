@@ -7,7 +7,7 @@
 ![Last Commit](https://img.shields.io/github/last-commit/rr537/NIH_ExPORTER_SM)
 ![Stars](https://img.shields.io/github/stars/rr537/NIH_ExPORTER_SM?style=social)
 
-A scalable and modular Snakemake workflow for processing NIH ExPORTER datasets into machine learning–ready training files—optimized for finding CRISPR/gene therapy related treatments for rare diseases. Features include preprocessing, keyword enrichment via FlashText, and configurable training data generation.
+A scalable and modular Snakemake workflow for processing NIH ExPORTER datasets into machine learning–ready training files—optimized for finding CRISPR/gene therapy related treatments for rare diseases but can be applied to other treatment-disease combinations, or used just to find relevant treatments are diseases. Features include preprocessing, keyword enrichment via FlashText, and configurable training data generation.
 
 ---
 
@@ -24,49 +24,122 @@ To overcome querying limits in both RePORTER and its API, this pipeline accelera
 
 ## Pipeline Overview
 
-### Step 1: Data Loading
-Ingests 6 NIH ExPORTER sources (CSV format):
-1. Projects  
-2. Abstracts  
-3. Publications  
-4. Patents  
-5. Clinical Studies  
-6. Linked Publications
+### Step 1: Data Loading and Data Preprocessing 
 
-### Step 2: Data Preprocessing
+This stage loads raw NIH ExPORTER datasets and prepares them for downstream analysis. It is modular and fully configurable via `config.yaml`.
 
-- **2A. Renaming**  
-  Configurable rules (`config.yaml`) to resolve column name discrepancies which have been observed in the NIH ExPORTER datasets (e.g., `CORE_PROJECT_NUM`, `PROJECT_ID`, `Core Project Number` → `PROJECT_NUMBER`).
+**1A. Configuration & Validation** 
+- Loads pipeline configuration and sets logging level.
+- Validates paths and checks for required data sources.
 
-- **2B. Appending**  
-  Consolidates year-based files (e.g., `RePORTER_PRJ_C_FY2024`, `~FY2023`, `~FY2022`) into a single dataset by source.
+**1B. Data Ingestion** 
+- Loads six NIH ExPORTER sources (CSV format):
+- Tracks loading metadata for auditability.
 
-- **2C. Linking**  
-  Merges Projects and Abstracts datasets using `APPLICATION_ID`.
+| File Identifier   | Description           | Data Source Link |
+|-------------------|-----------------------|------------------|
+| `PRJ`             | 1. Projects           | [Projects](https://reporter.nih.gov/exporter/projects) |
+| `PRJABS`          | 2. Abstracts          | [Abstracts](https://reporter.nih.gov/exporter/abstracts) |
+| `PUB`             | 3. Publications       | [Publications](https://reporter.nih.gov/exporter/publications) |
+| `Patents`         | 4. Patents            | [Patents](https://reporter.nih.gov/exporter/patents) |
+| `ClinicalStudies` | 5. Clinical Studies   | [Clinical Studies](https://reporter.nih.gov/exporter/clinicalstudies) |
+| `PUBLINK`         | 6. Linked Publications| [Link Tables](https://reporter.nih.gov/exporter/linktables) |
 
-- **2D. Aggregating Outcomes**  
-  Counts publications (`PMID`), patents (`PATENT_ID`), and clinical studies (`ClinicalTrials.gov ID`) per `PROJECT_NUMBER`. Normalizes key columns (trim whitespace, uppercase) and tracks:
-  - Unique duplicate rows  
-  - Total duplicates  
-  - Extra duplicates beyond first occurrence  
+**1C. Column Renaming** 
+- Resolves column name discrepancies using configurable mappings.
+- Ensures consistency across datasets (e.g., `CORE_PROJECT_NUM` → `PROJECT_NUMBER`).
 
-  Outputs results to `dedup_summary.csv` and merges back into the linked dataset.
+**1D. Appending by Source** 
+- Consolidates year-based files (e.g., `RePORTER_PRJ_C_FY2024`, `RePORTER_PRJ_C_FY2023`, `RePORTER_PRJ_C_FY2022`) into unified datasets per source (e.g., `PRJ`).
+- Outputs are saved as `.pkl` files for efficient downstream access.
 
-- **2E. Deduplication**  
-  Deduplicates the merged dataset by full row comparison. Updates the dedup summary table.
+**1E. Metadata Assembly**
+- Generates metadata summaries for ingestion, renaming, and appending steps.
+- Combines into a unified preprocessing summary.
 
-### Step 3: Keyword Identification & Counting
+**1F. Summary Export**
+- Exports preprocessing summary as a JSON file (`preprocessing_summary.json`).
+- Includes row counts, column mappings, and source-level statistics.
 
-- **3A. Variant Generation (Enrichment)**  
-  Generates keyword variants from base keywords defined in `config.yaml` (`treatment`, `disease`) using rules for pluralization, possessives, hyphens, and stopword filtering.
+### Step 2: Project Metrics & Deduplication
 
-  Note: For the current pipeline, it does not matter what kind of keyword is added to either the `treatment` or `disease` categories. Keywords in each category will be combined and treated the same way. 
+This stage links datasets, aggregates project outcomes, and removes duplicate records. It builds a metrics-rich dataset for downstream keyword analysis and ML export.
 
-- **3B. Matching & Counting**  
-  Text columns (`PROJECT_TITLE`, `PROJECT_TERMS`, `PHR`, `ABSTRACT_TEXT`) are concatenated. Keywords and variants are matched using FlashText. Supports batch and parallel processing.
+**2A. Data Input Resolution**
+- Resolves input pickle files from the preprocessing stage.
+- Loads all DataFrames into memory for processing.
 
-### Step 4: ML Training Dataset Export  
-Filters rows with `total_unique_count > 0`. Selected columns (defined in `config.yaml` under `ml_columns`) form the final ML-ready dataset.
+**2B. Linking Records**
+- Merges linked datasets (e.g., Projects with Abstracts) using shared identifiers (e.g., `APPLICATION_ID`).
+- Tracks linkage metadata for auditability.
+
+**2C. Aggregating Outcomes**
+- Counts publications (`PMID`), patents (`PATENT_ID`), and clinical studies (`ClinicalTrials.gov ID`) per `PROJECT_NUMBER`.
+- Produces a unified metrics DataFrame with normalized columns (trim whitespace, uppercase)
+
+**2D. Deduplication**
+- Removes true duplicate rows via full-record comparison.
+- Updates deduplication summary with:
+  - Unique duplicates
+  - Total duplicates
+  - Extra duplicates beyond first occurrence
+
+**2E. Export & Summary**
+- Exports final metrics dataset to CSV.
+- Generates a comprehensive JSON summary (`metrics_summary.json`) with:
+  - Linkage stats
+  - Aggregation counts
+  - Deduplication metrics
+
+## Step 3: Keyword Enrichment & Metadata
+
+This stage enriches the metrics dataset with keyword-level insights, including disease and treatment tagging. It produces a keyword-annotated dataset and a detailed summary for downstream analysis.
+
+**3A. Data Input Resolution**
+- Loads the metrics dataset from the previous stage.
+- Resolves input paths and validates schema.
+
+**3B. Keyword Preparation**
+- Generates keyword variants from base keywords defined in `config.yaml` (`treatment`, `disease`) using rules for pluralization, possessives, hyphens,
+- Applies optional stopword filtering based on config.
+- Note: For the current pipeline, keywords in either `treatment` or `disease` categories will be combined and treated the same way. 
+
+**3C. Enrichment**
+- Text columns (`PROJECT_TITLE`, `PROJECT_TERMS`, `PHR`, `ABSTRACT_TEXT`) are concatenated.
+- Keywords and variants are matched and tagged using FlashText. 
+- Computes enrichment metrics:
+  - Keyword frequency
+  - Co-occurrence patterns
+  - Coverage across records
+
+**3D. Export & Summary**
+- Exports keyword-enriched dataset to CSV.
+- Generates a JSON summary (`keywords_summary.json`) with:
+  - Keywords and generated variants 
+  - Treatment and disease tagging stats
+  - Matching coverage
+  - Stopword usage (if enabled)
+
+## Step 4: ML Exporter 
+
+This stage filters the keyword-enriched dataset to produce a machine learning–ready output. It applies configurable rules to select relevant records and exports both the final and dropped rows.
+
+**4A. Data Input Resolution**
+- Loads the keyword-enriched dataset from the previous stage.
+- Resolves input paths and validates schema.
+
+**4B. Filtering Logic**
+- Applies configurable filters (e.g., `total_unique_count >= 1`) to select relevant records.
+- Selected columns (defined in `config.yaml` under `ml_columns`) form the final ML-ready dataset.
+- Drops rows that do not meet criteria and optionally exports them.
+
+**4C. Export & Summary**
+- Exports ML-ready dataset to CSV.
+- Optionally exports dropped rows (`dropped_rows.csv`) if enabled in config.
+- Generates a JSON summary (`finalize_summary.json`) with:
+  - Filter criteria
+  - Row counts (kept vs dropped)
+  - Column-level stats
 
 ---
 
@@ -166,16 +239,18 @@ snakemake \
 
 # Manual CLI execution
 # Preprocessing step
-python scripts/cli.py preprocess --config config/config.yaml \
-                                 --output results/cleaned.csv \
-                                 --summary-json results/preprocessing_summary.json
+python bin/cli.py preprocess --config config/config.yaml \
+                             --output results/cleaned.csv \
+                             --summary-json results/preprocessing_summary.json
 
-# Keyword enrichment
-python scripts/cli.py enrich --config config/config.yaml \
-                             --output results/enriched.csv
+# Metrics
+python bin/cli.py metrics --config config/config.yaml \
 
-# ML training dataset creation
-python scripts/cli.py train --config config/config.yaml --stopwords
+# Keywords
+python bin/cli.py keywords --config config/config.yaml \
+
+# Finalize
+python bin/cli.py finalize --config config/config.yaml \
 ```
 
 ### 📤 Pipeline Outputs
