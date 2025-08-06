@@ -91,7 +91,7 @@ This stage links datasets, aggregates project outcomes, and removes duplicate re
   - Aggregation counts
   - Deduplication metrics
 
-## Step 3: Keyword Enrichment & Metadata
+### Step 3: Keyword Enrichment & Metadata
 
 This stage enriches the metrics dataset with keyword-level insights, including disease and treatment tagging. It produces a keyword-annotated dataset and a detailed summary for downstream analysis.
 
@@ -120,7 +120,7 @@ This stage enriches the metrics dataset with keyword-level insights, including d
   - Matching coverage
   - Stopword usage (if enabled)
 
-## Step 4: ML Export
+### Step 4: ML Export
 
 This stage filters the keyword-enriched dataset to produce a machine learning–ready output. It applies configurable rules to select relevant records and exports both the final and dropped rows.
 
@@ -211,36 +211,44 @@ project-root/
 ├── bin/
 │   └── cli.py                      # CLI entry point for each pipeline stage
 ├── src/
-│   └── common/
-│       ├── config_loader.py  #
-│       ├── logger.py
-│       └── path_utils.py
-│   └── preprocess/
-│       ├── preprocess_pipeline.py  
-│       ├── preprocess_validator.py 
-│       ├── preprocess_io.py
-│       ├── preprocess_transform.py
-│       └── preprocess_summary.py
-│   └── metrics/
-│       ├── metrics_pipeline.py  
-│       ├── metrics_io.py  
-│       ├── metrics_merge.py  
-│       ├── metrics_aggregate.py  
-│       ├── metrics_dedupe.py  
-│       └── metrics_summary.py  
-│   └── keywords/
-│       ├── keywords_pipeline.py  
-│       ├── keywords_io.py  
-│       ├── keywords_generator.py  
-│       └── keywords_enrichment.py  
-│   └── mlexport/
-│       ├── mlexport_pipeline.py  
-│       ├── mlexport_io.py  
-│       ├── mlexport_transform.py  
-│       └── mlexport_summary.py  
+│   └── common/                     # Shared utilities used across all pipeline stages
+│       ├── __init__.py             # Initializes module
+│       ├── config_loader.py        # Loads and parses config.yaml; supports nested keys and defaults
+│       ├── logger.py               # Centralized logging setup with stage-specific loggers
+│       └── path_utils.py           # Path resolution, directory creation, and cross-platform support
+│
+│   └── preprocess/                 # Handles raw data ingestion and transformation
+│       ├── __init__.py             # Initializes module
+│       ├── preprocess_pipeline.py  # Orchestrates preprocessing steps; entry point for Snakemake rule
+│       ├── preprocess_validator.py # Validates input formats, schema consistency, and required fields
+│       ├── preprocess_io.py        # Reads and writes raw/preprocessed data; handles pickling
+│       ├── preprocess_transform.py # Renaming, appending, and structural transformations
+│       └── preprocess_summary.py   # Generates summary stats and audit logs for preprocessing
+│ 
+│   └── metrics/                    # Aggregates and deduplicates project-level metrics
+│       ├── __init__.py             # Initializes module
+│       ├── metrics_pipeline.py     # Main pipeline logic for metrics stage
+│       ├── metrics_io.py           # I/O functions for metrics datasets and intermediate files
+│       ├── metrics_merge.py        # Merges datasets across sources (e.g., PRJ, PUB)
+│       ├── metrics_aggregate.py    # Computes aggregates (e.g., funding totals, publication counts)
+│       ├── metrics_dedupe.py       # Deduplication logic
+│       └── metrics_summary.py      # Summary outputs and diagnostics for metrics stage
+│ 
+│   └── keywords/                   # Adds keyword annotations and enrichment
+│       ├── __init__.py             # Initializes module
+│       ├── keywords_pipeline.py    # Entry point for keyword tagging and enrichment
+│       ├── keywords_io.py          # Handles reading/writing keyword datasets
+│       ├── keywords_generator.py   # Generates keyword tags 
+│       └── keywords_enrichment.py  # Enriches datasets with keyword metadata 
+│ 
+│   └── mlexport/                   # Final ML dataset preparation and export
+│       ├── __init__.py             # Initializes module
+│       ├── mlexport_pipeline.py    # Coordinates filtering and export steps
+│       ├── mlexport_io.py          # I/O for ML-ready datasets and dropped rows
+│       ├── mlexport_transform.py   # Applies final filters, feature selection, or formatting
+│       └── mlexport_summary.py     # Summarizes export results and logs dropped rows
 ├── LICENSE.md
 └── README.md
-
 ---
 
 ##  Usage
@@ -276,22 +284,34 @@ conda env create -f envs/nih.yml
 
 # Activate the environment
 conda activate nih_env
+
+# Check installed packages
+conda list
 ```
 
-### 🐍 Run Workflow 
+## 🐍 Run Workflow 
+### To execute the full pipeline:
 ```bash
-# Full pipeline (Note: finalize_training is a placeholder rule and may require adjustment.)
 snakemake \
-  --snakefile workflows/Snakefile \   # Path to the Snakefile
-  --configfile config/config.yaml \   # Path to config.yaml file 
-  --use-conda \                       # Use conda environments as specified
-  --cores 4 \                         # Specify number of CPU cores
-  finalize                            # Target rule
-\
+  --snakefile workflows/Snakefile \     # Path to Snakefile
+  --configfile config/config.yaml \     # Pipeline configuration
+  --use-conda \                         # Enable Conda environments
+  --cores 4 \                           # Number of CPU cores
+  mlexport                              # Target rule
+```
+Note: mlexport is the final rule. You can substitute it with any intermediate rule (e.g., preprocess, keywords) for partial runs.
 
-
-
+### To preview the workflow without executing:
+```bash
+snakemake \
+  --snakefile workflows/Snakefile \
+  --configfile config/config.yaml \
+  --use-conda \
+  --cores 4 \
+  --dry-run
+```
 # Manual CLI execution
+
 # Preprocessing step
 python bin/cli.py preprocess --config config/config.yaml \
                              --output results/cleaned.csv \
