@@ -245,15 +245,15 @@ project-root/
 │       ├── __init__.py             # Initializes module
 │       ├── mlexport_pipeline.py    # Coordinates filtering and export steps
 │       ├── mlexport_io.py          # I/O for ML-ready datasets and dropped rows
-│       ├── mlexport_transform.py   # Applies final filters, feature selection, or formatting
+│       ├── mlexport_transform.py   # Applies final filters and feature selection
 │       └── mlexport_summary.py     # Summarizes export results and logs dropped rows
 ├── LICENSE.md
 └── README.md
----
+```
 
 ##  Usage
 
-## 📦 Dependencies
+### 📦 Dependencies
 
 This project uses the `nih_env` Conda environment for reproducible data processing and ML pipeline execution.
 
@@ -292,6 +292,11 @@ conda list
 ## 🐍 Run Workflow 
 ### To execute the full pipeline:
 ```bash
+snakemake --snakefile workflows/Snakefile --configfile config/config.yaml --use-conda --cores 4 
+mlexport                           
+```
+Code description 
+```bash
 snakemake \
   --snakefile workflows/Snakefile \     # Path to Snakefile
   --configfile config/config.yaml \     # Pipeline configuration
@@ -310,71 +315,170 @@ snakemake \
   --cores 4 \
   --dry-run
 ```
-# Manual CLI execution
+## Manual CLI execution
 
-# Preprocessing step
+You can run individual pipeline stages manually using the CLI tool:
+
+### Preprocess
+```bash
 python bin/cli.py preprocess --config config/config.yaml \
-                             --output results/cleaned.csv \
-                             --summary-json results/preprocessing_summary.json
+```
+- Inital data loading and preprocessing of NIH ExPORTER files
+- Outputs preprocessed pickle files and a JSON summary
 
-# Metrics
+### Metrics
+```bash
 python bin/cli.py metrics --config config/config.yaml \
+```
+- Aggregates and deduplicates project-level metrics
+- Outputs metrics CSV and a JSON summary 
 
-# Keywords
+### Keywords
+```bash
 python bin/cli.py keywords --config config/config.yaml \
+```
+- Extracts domain-specific keywords using FlashText
+- Outputs enriched datasets with keyword metadata and a JSON summary 
 
-# Finalize
+### Mlexport
+```bash
 python bin/cli.py mlexport --config config/config.yaml \
 ```
+- Applies final filters and feature selection
+- Outputs final ML dataset, optional dropped rows dataset, and a JSON summary
 
-### 📤 Pipeline Outputs
+## 📤 Pipeline Outputs
 
-Upon successful execution, the pipeline will generate the following key outputs:
+Upon successful execution, the pipeline will generate the following key outputs, organized by stage:
 
-- `results/MLdf_training.csv`  
+###  Preprocessing (`results/preprocess/`)
+- `*.pkl` files  
+  → Serialized datasets for each source (e.g., Projects, Abstracts)
+
+- `preprocess_summary.json`  
+  → Summary of ingestion, renaming, and appending steps
+
+---
+
+###  Metrics (`results/metrics/`)
+- `metrics.csv`  
+  → Aggregated project-level metrics including publications, patents, and clinical studies
+
+- `metrics_summary.json`  
+  → Summary of linkage, aggregation, and deduplication statistics
+
+---
+
+###  Keywords (`results/keywords/`)
+- `keywords.csv`  
+  → Keyword-enriched dataset with tagging and frequency metrics
+
+- `keywords_summary.json`  
+  → Summary of keyword generation, enrichment coverage, and stopword usage
+
+---
+
+###  ML Export (`results/mlexport/`)
+- `mlexport.csv`  
   → Final ML-ready dataset containing rows with matched keywords
 
-- `results/MLdf_dropped.csv`  
-  → Dataset of rows excluded due to absence of keyword matches
+- `dropped_rows.csv` *(optional)*  
+  → Rows excluded due to absence of keyword matches (if `export_drop_output` is enabled)
 
-- `results/dedup_summary.csv`  
-  → Summary of duplicate detection and resolution across datasets
-
-- `results/summary.json`  
-  → Logs and metrics from preprocessing steps
+- `mlexport_summary.json`  
+  → Summary of filtering logic, row counts, and export diagnostics
 ---
 
 ## 🧠 Keyword Strategy
 
-Keywords are enriched using FlashText with rules for:
-- Pluralization and possessives  
-- Hyphen and accent normalization  
-- Optional stopword filtering
+Keyword enrichment is performed using **FlashText**, optimized for speed and precision across large datasets. The strategy includes:
 
-Note: There is no functional distinction between entries listed under `treatment` or `disease` in `config.yaml`; both are used for enrichment and matching.
+### Matching Rules
+- **Pluralization & Possessives**  
+  → Handles variations like “therapy” vs. “therapies” or “patient’s” vs. “patients”
+
+- **Hyphen & Accent Normalization**  
+  → Converts terms like “T-cell” to “T cell” and removes diacritics for consistent matching
+
+- **Case-Insensitive Matching**  
+  → Ensures keywords are detected regardless of capitalization
+
+- **Optional Stopword Filtering**  
+  → Removes common non-informative words to reduce false positives (configurable)
+
+---
+
+### Keyword Sources
+- Keywords are loaded from `config.yaml` under both `treatment` and `disease` categories  
+  → These categories are **logically grouped** but treated identically during enrichment
+
+- All keywords are preprocessed and deduplicated before matching
+
+---
+
+### Enrichment Output
+- Each matched keyword is tagged with its source category and frequency  
+- Enrichment coverage is logged in `keywords_summary.json`
 
 ---
 
 ## 🔑 Configurable Parameters (`config/config.yaml`)
 
-| Key                        | Description |
-|---------------------------|-------------|
-| `folder`                  | Root directory containing all ExPORTER subfolders  
-| `subfolders`              | Names of subdirectories with source datasets  
-| `rename_columns_map`      | Dictionary mapping old column names to standardized names  
-| `treatment`, `disease`    | Lists of base keywords for enrichment  
-| `text_columns`            | Target columns for keyword matching  
-| `ml_columns`              | Columns to include in final ML-ready export  
-| `output_dir`              | Output destination for results  
-| `dedup_summary_csv_path`  | Path for deduplication summary output  
-| `parallel`                | Enable/disable multiprocessing  
-| `workers`                 | Number of parallel threads for processing  
-| `loglevel`                | Logging verbosity level  
-| `remove_duplicates`       | Enable/disable deduplication logic  
+The pipeline is governed by a modular configuration file that defines input sources, enrichment logic, execution settings, and output destinations.
+
+### 📁 Input & Preprocessing
+| Key                  | Description |
+|----------------------|-------------|
+| `folder`             | Root directory containing all ExPORTER subfolders |
+| `subfolders`         | List of dataset-specific subdirectories to ingest |
+| `rename_columns_map` | Maps inconsistent column names to standardized schema |
+| `force_append`       | Enables forced appending of datasets across folders |
 
 ---
 
-## 📘 Data Dictionary (`MLdf_training.csv`)
+### 🧠 Keyword Enrichment
+| Key                        | Description |
+|----------------------------|-------------|
+| `keywords.treatment`       | List of treatment-related keywords for enrichment |
+| `keywords.disease`         | List of disease-related keywords for enrichment |
+| `keywords.remove_stopwords`| Enables stopword filtering during keyword matching |
+| `text_columns`             | Target columns for keyword scanning |
+| `cutoff_value`             | Minimum keyword match count required for ML inclusion |
+
+---
+
+### 📦 ML Export
+| Key                  | Description |
+|----------------------|-------------|
+| `ml_columns`         | Columns to include in final ML-ready dataset |
+| `export_drop_output`| Enables export of dropped rows with no keyword matches |
+
+---
+
+### ⚙️ Execution Settings
+| Key            | Description |
+|----------------|-------------|
+| `parallel`     | Enables multiprocessing for faster execution |
+| `workers`      | Number of parallel threads to use |
+| `loglevel`     | Logging verbosity level (`DEBUG`, `INFO`, etc.) |
+| `logs_dir`     | Directory for log file storage |
+| `log_to_file`  | Enables logging to file |
+| `log_to_console`| Enables logging to console |
+
+---
+
+### 📂 Output Paths
+| Key                  | Description |
+|----------------------|-------------|
+| `output_dir`         | Root directory for all pipeline outputs |
+| `preprocess_dir`     | Directory for serialized preprocessed datasets |
+| `metrics_dir`        | Directory for aggregated metrics and summaries |
+| `keywords_dir`       | Directory for keyword-enriched outputs |
+| `mlexport_dir`       | Directory for ML-ready exports |
+
+---
+
+## 📘 Data Dictionary (`mlexport.csv`)
 
 | Column              | Description                                      |
 |---------------------|--------------------------------------------------|

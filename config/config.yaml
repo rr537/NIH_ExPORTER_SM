@@ -1,7 +1,9 @@
 # Configuration for NIH ExPORTER Workflow
 
+# Environment
 env_path: ./envs/nih.yml
 
+# Input & Preprocessing
 folder: data/raw
 
 subfolders:
@@ -17,6 +19,9 @@ rename_columns_map:
   PROJECT_ID: PROJECT_NUMBER
   Core Project Number: PROJECT_NUMBER
 
+force_append: true # For append_dataframes_by_folder () in preprocess ()
+
+# Keyword Enrichment
 keywords:
   remove_stopwords: true
   treatment:
@@ -90,11 +95,15 @@ keywords:
     - Wilson's Disease
     - Wolfram Syndrome
 
+
+# ML Export
 text_columns:
   - PROJECT_TITLE
   - PROJECT_TERMS
   - PHR
   - ABSTRACT_TEXT
+
+cutoff_value: 1 # Minimum keyword match count required for ML inclusion
 
 ml_columns:
   - APPLICATION_ID
@@ -106,24 +115,20 @@ ml_columns:
   - total unique count
   - flagged
 
-# 🔧 Workflow toggles
-force_append: true # For append_dataframes_by_folder () in preprocess ()
+export_drop_output: true # Export rows excluded due to no keyword matches
+
+# Execution settings
 parallel: true # For inital load of dataframes in preprocess() and keyword enrichment in keywords() 
-
-# mlexport
-export_drop_output: true
-cutoff_value: 1
-
-# 🧪 Execution settings
+workers: 11
 loglevel: DEBUG
 logs_dir: logs
 log_to_file: True 
 log_to_console: True
-workers: 11
 
-# 📂 Output settings
+
+# Output settings
 output_dir: results
-preprocess_dir: results/preprocessed
+preprocess_dir: results/preprocess
 metrics_dir: results/metrics
 keywords_dir: results/keywords
 mlexport_dir: results/mlexport
