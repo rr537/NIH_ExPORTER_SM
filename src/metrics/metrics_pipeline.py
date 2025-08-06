@@ -1,11 +1,12 @@
 from common.config_loader import load_config
 from common.logger import configure_logger
 from common.path_utils import resolve_input_files, resolve_output_path
+from common.io_utils import export_summary_json
 from .metrics_merge import merge_linked_dataframes
 from .metrics_aggregate import aggregate_project_outputs
 from .metrics_dedupe import remove_true_duplicates_from_df
 from .metrics_summary import assemble_metrics_metadata, build_metrics_summary
-from .metrics_io import load_pickle_dataframes, export_metrics_csv, export_summary_json
+from .metrics_io import load_pickle_dataframes, export_metrics_csv
 from typing import Optional, List 
 
 
@@ -38,7 +39,7 @@ def metrics(pickles: Optional[List[str]], config_path: str, output_path: str, su
     metrics_summary = build_metrics_summary(metadata_raw)
 
     # 9. Export summary to JSON
-    export_summary_json(metrics_summary, output_dir, summary_path, logger)
+    export_summary_json(metrics_summary, output_dir, default_filename="metrics_summary.json", summary_path=summary_path, logger=logger)
 
     return metrics_df, metrics_summary
 

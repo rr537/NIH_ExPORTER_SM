@@ -2,7 +2,8 @@ from pathlib import Path
 from common.config_loader import load_config
 from common.logger import configure_logger
 from common.path_utils import resolve_input_files, resolve_output_path
-from finalize.finalize_io import load_keywords_dataframe, export_finalized_csv, export_summary_json
+from common.io_utils import export_summary_json
+from finalize.finalize_io import load_keywords_dataframe, export_finalized_csv
 from finalize.finalize_transform import filter_df
 from finalize.finalize_summary import assemble_finalize_metadata, build_finalize_summary
 
@@ -36,6 +37,6 @@ def finalize(keywords: str, config_path: str, output_path: str, summary_path: st
     finalize_summary = build_finalize_summary(finalize_metadata)
 
     # 8. Export summary JSON
-    export_summary_json(finalize_summary, output_dir, summary_path, logger)
+    export_summary_json(finalize_summary, output_dir, default_filename="finalize_summary.json", summary_path=summary_path, logger=logger)
 
     return MLdf, finalize_summary

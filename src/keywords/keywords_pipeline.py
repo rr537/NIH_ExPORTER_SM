@@ -1,7 +1,8 @@
 from common.config_loader import load_config
 from common.logger import configure_logger
 from common.path_utils import resolve_output_path, resolve_input_files
-from .keywords_io import load_metrics_dataframe, export_keywords_csv, export_summary_json
+from common.io_utils import export_summary_json
+from .keywords_io import load_metrics_dataframe, export_keywords_csv
 from .keywords_keywords_generator import prepare_keywords
 from .keywords_keywords_enrichment import enrich_with_keyword_metrics
 from .keywords_summary import assemble_keywords_metadata, build_keywords_summary
@@ -32,6 +33,6 @@ def keywords(metrics: str, config_path: str, output_path: str, summary_path: str
     keywords_summary = build_keywords_summary(metadata_raw)
 
     # 8. Export summary to JSON
-    export_summary_json(keywords_summary, output_dir, summary_path, logger)
+    export_summary_json(keywords_summary, output_dir, default_filename="keywords_summary.json", summary_path=summary_path, logger=logger)
 
     return keywords_df, keywords_summary

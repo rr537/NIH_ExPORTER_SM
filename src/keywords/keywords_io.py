@@ -49,31 +49,3 @@ def export_keywords_csv(
     logger.info(f"Keyword-enriched DataFrame saved to: {keywords_path}")
 
     return keywords_path
-
-def export_summary_json(
-    summary: Dict,
-    output_dir: Union[str, Path],
-    summary_path: Optional[Union[str, Path]] = None,
-    logger: Optional[logging.Logger] = None
-) -> Path:
-    """
-    Exports the keyword enrichment summary to a JSON file.
-
-    Args:
-        summary: Dictionary containing enrichment metrics
-        output_dir: Base output directory
-        summary_path: Optional custom summary path
-        logger: Optional logger for status messages
-
-    Returns:
-        Path to the saved JSON summary
-    """
-    final_path = Path(summary_path).resolve() if summary_path else output_dir / "keywords_summary.json"
-
-    with open(final_path, "w", encoding="utf-8") as f:
-        json.dump(summary, f, indent=2)
-
-    if logger:
-        logger.info(f"Keywords summary exported to: {final_path}")
-
-    return final_path

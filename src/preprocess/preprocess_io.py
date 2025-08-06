@@ -138,26 +138,3 @@ def save_pickle_files(
         except Exception as e:
             if logger:
                 logger.error(f"Failed to save {name}.pkl: {str(e)}", exc_info=True)
-
-# Export summary dictionary to JSON
-def export_summary_json(
-    summary: Dict[str, Any],
-    output_dir: Path,
-    logger: Optional[logging.Logger] = None,
-    summary_path: Optional[Path] = None
-) -> None:
-    if summary_path is None:
-        summary_path = output_dir / "preprocessing_summary.json"
-    else:
-        summary_path = Path(summary_path).resolve()
-
-    summary_path.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        with open(summary_path, "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2)
-        if logger:
-            logger.info(f"Preprocessing summary exported to: {summary_path}")
-    except Exception as e:
-        if logger:
-            logger.error(f"Failed to export summary JSON: {str(e)}", exc_info=True)

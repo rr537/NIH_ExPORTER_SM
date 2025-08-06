@@ -50,28 +50,3 @@ def export_metrics_csv(
         logger.info(f"Metrics DataFrame saved to: {metrics_path}")
 
     return metrics_path
-
-def export_summary_json(
-    summary: Dict[str, Any],
-    output_path: Path,
-    summary_path: Optional[Path] = None,
-    logger: Optional[logging.Logger] = None
-) -> Path:
-    """
-    Exports the summary dictionary to JSON at the specified path.
-    If no summary_path is provided, defaults to 'metrics_summary.json' in output_path.
-    """
-    if summary_path is None:
-        summary_path = output_path / "metrics_summary.json"
-    else:
-        summary_path = summary_path.resolve()
-
-    summary_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(summary_path, "w", encoding="utf-8") as f:
-        json.dump(summary, f, indent=2)
-
-    if logger:
-        logger.info(f"Metrics summary exported to: {summary_path}")
-
-    return summary_path
